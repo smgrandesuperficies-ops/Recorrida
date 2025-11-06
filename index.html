@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Movimientos de Planta - Encargados y Fleteros</title>
+  <title>Movimientos de Planta - Login + Roles</title>
   <style>
     :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
     body{margin:0;padding:16px;background:#f4f6f8;color:#0b1720}
@@ -11,7 +11,7 @@
     h1{font-size:18px;margin:0}
     .card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 4px rgba(10,20,30,0.06);margin-top:12px}
     label{display:block;margin-top:8px;font-size:13px;color:#334155}
-    input[type=text],input[type=number],select,textarea{width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px}
+    input[type=text],input[type=password],input[type=number],select,textarea{width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px}
     button{background:#0b74ff;color:white;border:0;padding:8px 12px;border-radius:8px;font-weight:600;margin-top:10px;cursor:pointer}
     button.ghost{background:transparent;color:#0b1720;border:1px solid #e2e8f0}
     .row{display:flex;gap:8px;flex-wrap:wrap}
@@ -27,81 +27,123 @@
       .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
       body{max-width:1100px;margin:0 auto;}
     }
+    #app{display:none}
+    #rolePicker{display:none}
   </style>
 </head>
 <body>
 <header>
-  <h1>Movimientos de Planta — Interno</h1>
-  <small>Encargados crean → Fleteros actualizan</small>
+  <h1>Movimientos de Planta — Sistema interno</h1>
 </header>
 
-<div class="grid-2">
-  <!-- BLOQUE ENCARGADO -->
-  <div class="card">
-    <h2 style="margin:0 0 6px 0;font-size:15px">Alta de movimiento (Encargado)</h2>
-    <label>Nombre del encargado
-      <input id="encargado" type="text" placeholder="Ej: Juan Pérez" />
-    </label>
-    <div class="row">
-      <div class="col">
-        <label>Planta / Origen
-          <input id="origen" type="text" placeholder="Ej: Planta 1" />
-        </label>
-      </div>
-      <div class="col">
-        <label>Destino
-          <input id="destino" type="text" placeholder="Ej: Depósito central" />
-        </label>
-      </div>
-    </div>
-    <label>Producto / Descripción
-      <input id="descripcion" type="text" placeholder="Ej: 20 cajas de repuestos" />
-    </label>
-    <div class="row">
-      <div class="col">
-        <label>Cantidad
-          <input id="cantidad" type="number" min="1" value="1" />
-        </label>
-      </div>
-      <div class="col">
-        <label>Prioridad
-          <select id="prioridad">
-            <option value="Media">Media</option>
-            <option value="Alta">Alta</option>
-            <option value="Baja">Baja</option>
-          </select>
-        </label>
-      </div>
-    </div>
-    <label>Observaciones
-      <textarea id="obs" rows="2" placeholder="Algo a tener en cuenta para el fletero..."></textarea>
-    </label>
-    <button id="btnCreate">Crear movimiento</button>
-    <small style="display:block;margin-top:6px">Se crea con estado <strong>Pendiente</strong>.</small>
-  </div>
-
-  <!-- BLOQUE FLETERO -->
-  <div class="card">
-    <h2 style="margin:0 0 6px 0;font-size:15px">Panel del fletero</h2>
-    <label>Mi nombre (fletero)
-      <input id="fleteroNombre" type="text" placeholder="Ej: Camión 3 - Luis" />
-    </label>
-    <small>Usaremos este nombre cuando toques “Tomar” o cambies estado.</small>
-  </div>
+<!-- LOGIN -->
+<div class="card" id="loginBox">
+  <h2 style="margin-top:0;font-size:15px">Ingresar</h2>
+  <label>Correo
+    <input id="loginEmail" type="text" placeholder="encargado@empresa.com" />
+  </label>
+  <label>Contraseña
+    <input id="loginPass" type="password" placeholder="******" />
+  </label>
+  <button id="btnLogin">Ingresar</button>
+  <button id="btnRegister" class="ghost">Crear cuenta</button>
+  <small style="display:block;margin-top:6px">Cada encargado / fletero puede tener su usuario.</small>
 </div>
 
-<!-- LISTADO -->
-<div class="card" style="margin-top:12px">
-  <h2 style="margin:0 0 6px 0;font-size:15px">Movimientos registrados</h2>
-  <div id="movList"></div>
-  <small id="movCount"></small>
+<!-- ELEGIR ROL (solo primera vez) -->
+<div class="card" id="rolePicker">
+  <h2 style="margin-top:0;font-size:15px">Seleccioná tu rol</h2>
+  <p style="margin:0 0 6px 0">No encontramos tu rol en el sistema. Elegí uno:</p>
+  <div class="row">
+    <div class="col">
+      <button onclick="saveRole('encargado')">Soy ENCARGADO</button>
+    </div>
+    <div class="col">
+      <button onclick="saveRole('fletero')">Soy FLETERO</button>
+    </div>
+  </div>
+  <small>Esto se guarda en Firestore y la próxima vez entra directo.</small>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px">
+    <div>
+      <strong id="userInfo"></strong>
+      <small id="userRole" style="margin-left:4px"></small>
+    </div>
+    <button class="ghost" id="btnLogout">Salir</button>
+  </div>
+
+  <div class="grid-2">
+    <!-- BLOQUE ENCARGADO (solo rol=encargado) -->
+    <div class="card" id="encargadoBox">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Alta de movimiento (Encargado)</h2>
+      <label>Nombre del encargado
+        <input id="encargado" type="text" placeholder="Ej: Juan Pérez" />
+      </label>
+      <div class="row">
+        <div class="col">
+          <label>Planta / Origen
+            <input id="origen" type="text" placeholder="Ej: Planta 1" />
+          </label>
+        </div>
+        <div class="col">
+          <label>Destino
+            <input id="destino" type="text" placeholder="Ej: Depósito central" />
+          </label>
+        </div>
+      </div>
+      <label>Producto / Descripción
+        <input id="descripcion" type="text" placeholder="Ej: 20 cajas de repuestos" />
+      </label>
+      <div class="row">
+        <div class="col">
+          <label>Cantidad
+            <input id="cantidad" type="number" min="1" value="1" />
+          </label>
+        </div>
+        <div class="col">
+          <label>Prioridad
+            <select id="prioridad">
+              <option value="Media">Media</option>
+              <option value="Alta">Alta</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <label>Observaciones
+        <textarea id="obs" rows="2" placeholder="Algo a tener en cuenta para el fletero..."></textarea>
+      </label>
+      <button id="btnCreate">Crear movimiento</button>
+      <small style="display:block;margin-top:6px">Se crea con estado <strong>Pendiente</strong>.</small>
+    </div>
+
+    <!-- BLOQUE FLETERO (solo rol=fletero) -->
+    <div class="card" id="fleteroBox">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Panel del fletero</h2>
+      <label>Mi nombre (fletero)
+        <input id="fleteroNombre" type="text" placeholder="Ej: Camión 3 - Luis" />
+      </label>
+      <small>Se usa cuando tomás o cambiás estado.</small>
+    </div>
+  </div>
+
+  <!-- LISTADO -->
+  <div class="card" style="margin-top:12px">
+    <h2 style="margin:0 0 6px 0;font-size:15px">Movimientos registrados</h2>
+    <div id="movList"></div>
+    <small id="movCount"></small>
+  </div>
 </div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 <script>
-  // tu config (la misma de antes)
+  // 1) Config de tu proyecto
   const firebaseConfig = {
     apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
     authDomain: "recorrida-planta.firebaseapp.com",
@@ -113,11 +155,103 @@
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-  const COL = "movimientos";
+  const auth = firebase.auth();
 
   const $ = id => document.getElementById(id);
+  const COL_MOV = "movimientos";
+  const COL_USERS = "usuarios";
 
-  // crear movimiento (encargado)
+  // 2) Login / Registro
+  $('btnLogin').onclick = async () => {
+    const email = $('loginEmail').value.trim();
+    const pass = $('loginPass').value.trim();
+    if(!email || !pass){ alert("Completá email y contraseña"); return; }
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+    } catch(e){
+      alert("Error al ingresar: " + e.message);
+    }
+  };
+
+  $('btnRegister').onclick = async () => {
+    const email = $('loginEmail').value.trim();
+    const pass = $('loginPass').value.trim();
+    if(!email || !pass){ alert("Completá email y contraseña"); return; }
+    try {
+      await auth.createUserWithEmailAndPassword(email, pass);
+      // luego onAuthStateChanged se encarga de mostrar selector de rol
+    } catch(e){
+      alert("Error al crear usuario: " + e.message);
+    }
+  };
+
+  $('btnLogout').onclick = () => auth.signOut();
+
+  // 3) Detectar usuario logueado
+  let currentUser = null;
+  let currentRole = null;
+
+  auth.onAuthStateChanged(async (user)=>{
+    currentUser = user;
+    if(!user){
+      // no logueado
+      $('loginBox').style.display = 'block';
+      $('app').style.display = 'none';
+      $('rolePicker').style.display = 'none';
+      return;
+    }
+
+    // logueado
+    $('loginBox').style.display = 'none';
+    $('userInfo').textContent = user.email;
+
+    // buscar rol en Firestore
+    const docRef = db.collection(COL_USERS).doc(user.uid);
+    const doc = await docRef.get();
+    if(!doc.exists){
+      // no tiene rol todavía
+      $('rolePicker').style.display = 'block';
+      $('app').style.display = 'none';
+      return;
+    }
+
+    currentRole = doc.data().rol;
+    showAppForRole(currentRole);
+  });
+
+  // 4) Guardar rol
+  async function saveRole(rol){
+    if(!currentUser) return;
+    await db.collection(COL_USERS).doc(currentUser.uid).set({
+      email: currentUser.email,
+      rol: rol,
+      createdAt: new Date().toISOString()
+    });
+    currentRole = rol;
+    showAppForRole(rol);
+  }
+  window.saveRole = saveRole;
+
+  // 5) Mostrar app según rol
+  function showAppForRole(rol){
+    $('rolePicker').style.display = 'none';
+    $('app').style.display = 'block';
+    $('userRole').textContent = 'Rol: ' + rol;
+
+    if(rol === 'encargado'){
+      $('encargadoBox').style.display = 'block';
+      $('fleteroBox').style.display = 'none';
+    } else if(rol === 'fletero'){
+      $('encargadoBox').style.display = 'none';
+      $('fleteroBox').style.display = 'block';
+    } else {
+      // por si hay otro rol
+      $('encargadoBox').style.display = 'none';
+      $('fleteroBox').style.display = 'none';
+    }
+  }
+
+  // 6) Crear movimiento (solo encargado)
   $('btnCreate').onclick = async () => {
     const mov = {
       creadoEn: new Date().toISOString(),
@@ -129,24 +263,23 @@
       prioridad: $('prioridad').value,
       obs: $('obs').value.trim(),
       estado: "Pendiente",
-      fletero: null
+      fletero: null,
+      creadoPorUid: currentUser ? currentUser.uid : null
     };
-    // validación simple
     if(!mov.encargado || !mov.descripcion){
-      alert("Completá al menos encargado y descripción/producto.");
+      alert("Completá al menos encargado y descripción");
       return;
     }
-    await db.collection(COL).add(mov);
-    // limpiar
+    await db.collection(COL_MOV).add(mov);
     $('descripcion').value = '';
     $('cantidad').value = 1;
     $('obs').value = '';
   };
 
-  // render listado en tiempo real
-  db.collection(COL)
-    .orderBy("estado", "asc")       // pendientes arriba
-    .orderBy("creadoEn", "desc")
+  // 7) Listado en tiempo real (todos lo ven)
+  db.collection(COL_MOV)
+    .orderBy("estado","asc")
+    .orderBy("creadoEn","desc")
     .onSnapshot((snap)=>{
       const cont = $('movList');
       cont.innerHTML = '';
@@ -154,9 +287,9 @@
       snap.forEach(doc=>{
         count++;
         const d = doc.data();
+        const estadoClass = 'estado-' + d.estado.replace(' ', '\\ ');
         const div = document.createElement('div');
         div.className = 'movement';
-        const estadoClass = 'estado-' + d.estado.replace(' ', '\\ ');
         div.innerHTML = `
           <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
             <div>
@@ -188,34 +321,43 @@
       $('movCount').textContent = count ? `${count} movimientos` : 'No hay movimientos aún';
     });
 
-  // funciones globales para los botones
+  // 8) Acciones del fletero
   async function assignFletero(id){
-    const nombre = $('fleteroNombre').value.trim();
-    if(!nombre){
-      alert("Poné tu nombre de fletero arriba primero.");
+    if(currentRole !== 'fletero' && currentRole !== 'encargado'){
+      alert("No tenés rol para tomar viajes");
       return;
     }
-    await db.collection(COL).doc(id).update({
+    const nombre = $('fleteroNombre').value.trim() || (currentUser ? currentUser.email : '');
+    if(!nombre){ alert("Poné tu nombre de fletero arriba"); return; }
+    await db.collection(COL_MOV).doc(id).update({
       fletero: nombre
     });
   }
   async function setEstado(id, estado){
-    const nombre = $('fleteroNombre').value.trim();
-    // opcional: si no hay fletero asignado, se lo asignamos al que cambia estado
+    if(currentRole !== 'fletero' && currentRole !== 'encargado'){
+      alert("No tenés rol para cambiar estado");
+      return;
+    }
+    const nombre = $('fleteroNombre').value.trim() || (currentUser ? currentUser.email : '');
     const updateData = { estado };
     if(nombre) updateData.fletero = nombre;
-    await db.collection(COL).doc(id).update(updateData);
+    await db.collection(COL_MOV).doc(id).update(updateData);
   }
   async function deleteMov(id){
+    // solo encargados pueden borrar
+    if(currentRole !== 'encargado'){
+      alert("Solo un encargado puede eliminar");
+      return;
+    }
     if(confirm("¿Eliminar este movimiento?")){
-      await db.collection(COL).doc(id).delete();
+      await db.collection(COL_MOV).doc(id).delete();
     }
   }
-  // exponer
   window.assignFletero = assignFletero;
   window.setEstado = setEstado;
   window.deleteMov = deleteMov;
 </script>
 </body>
 </html>
+
 
