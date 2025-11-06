@@ -207,6 +207,7 @@
   let currentUser = null;
   let currentRole = null;
   let currentTypeFilter = "todos";
+  let unsubscribeMov = null; // <- importante
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -236,6 +237,7 @@
       $('loginBox').style.display = 'block';
       $('app').style.display = 'none';
       $('rolePicker').style.display = 'none';
+      if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
       return;
     }
     $('loginBox').style.display = 'none';
@@ -250,6 +252,7 @@
     }
     currentRole = doc.data().rol;
     showAppForRole(currentRole);
+    startMovListener(); // <- ahora sí, ya sabemos el rol
   });
 
   async function saveRole(rol){
@@ -261,6 +264,7 @@
     });
     currentRole = rol;
     showAppForRole(rol);
+    startMovListener();
   }
   window.saveRole = saveRole;
 
@@ -311,9 +315,9 @@
   };
 
   // FILTROS
-  $('filter-todos').onclick = () => setTypeFilter("todos");
-  $('filter-mp').onclick    = () => setTypeFilter("Materia Prima");
-  $('filter-pt').onclick    = () => setTypeFilter("Productos Terminados");
+  $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
+  $('filter-mp').onclick    = () => { setTypeFilter("Materia Prima"); startMovListener(); };
+  $('filter-pt').onclick    = () => { setTypeFilter("Productos Terminados"); startMovListener(); };
   function setTypeFilter(val){
     currentTypeFilter = val;
     ['filter-todos','filter-mp','filter-pt'].forEach(id => $(id).classList.remove('filter-active'));
@@ -322,117 +326,122 @@
     if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
   }
 
-  // LISTA
-  db.collection(COL_MOV)
-    .orderBy("creadoEn","desc")
-    .onSnapshot((snap)=>{
-      const cont = $('movList');
-      cont.innerHTML = '';
-      let count = 0;
-      snap.forEach(doc=>{
-        const d = doc.data();
+  // LISTENER DE MOVIMIENTOS (se arma después de tener rol)
+  function startMovListener(){
+    if (!currentUser || !currentRole) return;
+    if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
 
-        // fletero no ve entregados
-        if (currentRole === 'fletero' && d.estado === 'Entregado') {
-          return;
-        }
-        // filtro por tipo
-        if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) {
-          return;
-        }
+    unsubscribeMov = db.collection(COL_MOV)
+      .orderBy("creadoEn","desc")
+      .onSnapshot((snap)=>{
+        const cont = $('movList');
+        cont.innerHTML = '';
+        let count = 0;
+        snap.forEach(doc=>{
+          const d = doc.data();
 
-        count++;
-        const div = document.createElement('div');
-        div.className = 'movement';
-        const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
+          // fletero no ve entregados
+          if (currentRole === 'fletero' && d.estado === 'Entregado') {
+            return;
+          }
+          // filtro
+          if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) {
+            return;
+          }
 
-        div.innerHTML = `
-          <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
-            <div>
-              <strong>${d.descripcion || '(sin descripción)'} </strong>
-              <span class="badge ${estadoClass}">${d.estado}</span>
+          count++;
+          const div = document.createElement('div');
+          div.className = 'movement';
+          const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
+
+          div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <div>
+                <strong>${d.descripcion || '(sin descripción)'} </strong>
+                <span class="badge ${estadoClass}">${d.estado}</span>
+              </div>
+              <small>${new Date(d.creadoEn).toLocaleString()}</small>
             </div>
-            <small>${new Date(d.creadoEn).toLocaleString()}</small>
-          </div>
-          <div style="margin-top:4px">
-            <small>Encargado:</small> ${d.encargado || '—'} |
-            <small>Origen:</small> ${d.origen || '—'} →
-            <small>Destino:</small> ${d.destino || '—'}
-          </div>
-          <div style="margin-top:4px">
-            <small>Cant:</small> ${d.cantidad || 0} |
-            <small>Prioridad:</small> ${d.prioridad || '—'} |
-            <small>Tipo:</small> ${d.tipoViaje || '—'} |
-            <small>Fletero:</small> ${d.fletero || '—'}
-          </div>
-          ${d.horarioEstimado ? `<div style="margin-top:4px"><small>Horario estimado:</small> ${new Date(d.horarioEstimado).toLocaleString()}</div>` : ''}
-          ${d.obs ? `<div style="margin-top:4px"><small>Obs:</small> ${d.obs}</div>` : ''}
-          <div class="actions" id="actions-${doc.id}"></div>
-        `;
+            <div style="margin-top:4px">
+              <small>Encargado:</small> ${d.encargado || '—'} |
+              <small>Origen:</small> ${d.origen || '—'} →
+              <small>Destino:</small> ${d.destino || '—'}
+            </div>
+            <div style="margin-top:4px">
+              <small>Cant:</small> ${d.cantidad || 0} |
+              <small>Prioridad:</small> ${d.prioridad || '—'} |
+              <small>Tipo:</small> ${d.tipoViaje || '—'} |
+              <small>Fletero:</small> ${d.fletero || '—'}
+            </div>
+            ${d.horarioEstimado ? `<div style="margin-top:4px"><small>Horario estimado:</small> ${new Date(d.horarioEstimado).toLocaleString()}</div>` : ''}
+            ${d.obs ? `<div style="margin-top:4px"><small>Obs:</small> ${d.obs}</div>` : ''}
+            <div class="actions" id="actions-${doc.id}"></div>
+          `;
 
-        const actionsDiv = div.querySelector(`#actions-${doc.id}`);
+          const actionsDiv = div.querySelector(`#actions-${doc.id}`);
 
-        // PREPARADO puede marcar y cargar hora
-        if (currentRole === 'preparado') {
-          const btnListo = document.createElement('button');
-          btnListo.className = 'ghost';
-          btnListo.textContent = 'Listo para retirar';
-          btnListo.onclick = () => setEstadoPreparado(doc.id);
-          actionsDiv.appendChild(btnListo);
+          // PREPARADO
+          if (currentRole === 'preparado') {
+            const btnListo = document.createElement('button');
+            btnListo.className = 'ghost';
+            btnListo.textContent = 'Listo para retirar';
+            btnListo.onclick = () => setEstadoPreparado(doc.id);
+            actionsDiv.appendChild(btnListo);
 
-          const btnHorario = document.createElement('button');
-          btnHorario.className = 'ghost';
-          btnHorario.textContent = 'Cargar horario';
-          btnHorario.onclick = () => setHorarioEstimado(doc.id);
-          actionsDiv.appendChild(btnHorario);
-        }
+            const btnHorario = document.createElement('button');
+            btnHorario.className = 'ghost';
+            btnHorario.textContent = 'Hora';
+            btnHorario.onclick = () => setHorarioEstimado(doc.id);
+            actionsDiv.appendChild(btnHorario);
+          }
 
-        // FLETERO ahora puede hacer todo
-        if (currentRole === 'fletero') {
-          const btnListo = document.createElement('button');
-          btnListo.className = 'ghost';
-          btnListo.textContent = 'Listo';
-          btnListo.onclick = () => setEstadoPreparado(doc.id);
-          actionsDiv.appendChild(btnListo);
+          // FLETERO – ahora SIEMPRE tiene los botones
+          if (currentRole === 'fletero') {
+            const btnListo = document.createElement('button');
+            btnListo.className = 'ghost';
+            btnListo.textContent = 'Listo';
+            btnListo.onclick = () => setEstadoPreparado(doc.id);
+            actionsDiv.appendChild(btnListo);
 
-          const btnHorario = document.createElement('button');
-          btnHorario.className = 'ghost';
-          btnHorario.textContent = 'Hora';
-          btnHorario.onclick = () => setHorarioEstimado(doc.id);
-          actionsDiv.appendChild(btnHorario);
+            const btnHorario = document.createElement('button');
+            btnHorario.className = 'ghost';
+            btnHorario.textContent = 'Hora';
+            btnHorario.onclick = () => setHorarioEstimado(doc.id);
+            actionsDiv.appendChild(btnHorario);
 
-          const btnTomar = document.createElement('button');
-          btnTomar.className = 'ghost';
-          btnTomar.textContent = 'Tomar';
-          btnTomar.onclick = () => assignFletero(doc.id);
-          actionsDiv.appendChild(btnTomar);
+            const btnTomar = document.createElement('button');
+            btnTomar.className = 'ghost';
+            btnTomar.textContent = 'Tomar';
+            btnTomar.onclick = () => assignFletero(doc.id);
+            actionsDiv.appendChild(btnTomar);
 
-          const btnEnViaje = document.createElement('button');
-          btnEnViaje.className = 'ghost';
-          btnEnViaje.textContent = 'En viaje';
-          btnEnViaje.onclick = () => setEstado(doc.id, 'En viaje');
-          actionsDiv.appendChild(btnEnViaje);
+            const btnEnViaje = document.createElement('button');
+            btnEnViaje.className = 'ghost';
+            btnEnViaje.textContent = 'En viaje';
+            btnEnViaje.onclick = () => setEstado(doc.id, 'En viaje');
+            actionsDiv.appendChild(btnEnViaje);
 
-          const btnEntregado = document.createElement('button');
-          btnEntregado.className = 'ghost';
-          btnEntregado.textContent = 'Entregado';
-          btnEntregado.onclick = () => setEstado(doc.id, 'Entregado');
-          actionsDiv.appendChild(btnEntregado);
-        }
+            const btnEntregado = document.createElement('button');
+            btnEntregado.className = 'ghost';
+            btnEntregado.textContent = 'Entregado';
+            btnEntregado.onclick = () => setEstado(doc.id, 'Entregado');
+            actionsDiv.appendChild(btnEntregado);
+          }
 
-        // ENCARGADO puede borrar los que creó él
-        if (currentRole === 'encargado' && currentUser && d.creadoPorUid === currentUser.uid) {
-          const x = document.createElement('button');
-          x.textContent = '×';
-          x.className = 'delete-x';
-          x.onclick = () => deleteMov(doc.id);
-          div.appendChild(x);
-        }
+          // ENCARGADO elimina lo suyo
+          if (currentRole === 'encargado' && currentUser && d.creadoPorUid === currentUser.uid) {
+            const x = document.createElement('button');
+            x.textContent = '×';
+            x.className = 'delete-x';
+            x.onclick = () => deleteMov(doc.id);
+            div.appendChild(x);
+          }
 
-        cont.appendChild(div);
+          cont.appendChild(div);
+        });
+        $('movCount').textContent = count ? `${count} movimientos` : 'No hay movimientos aún';
       });
-      $('movCount').textContent = count ? `${count} movimientos` : 'No hay movimientos aún';
-    });
+  }
 
   // ACCIONES
   async function assignFletero(id){
@@ -475,6 +484,7 @@
     await db.collection(COL_MOV).doc(id).delete();
   }
 
+  // expongo
   window.saveRole = saveRole;
   window.assignFletero = assignFletero;
   window.setEstado = setEstado;
