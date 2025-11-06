@@ -13,16 +13,16 @@
       --muted: #6b7280;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
     }
-    body{margin:0;padding:16px;background:var(--bg);color:var(--text)}
-    header{background:linear-gradient(90deg,#2563eb,#1d4ed8);color:white;padding:14px 16px;border-radius:14px;max-width:1100px;margin:0 auto}
+    body{margin:0;padding:16px;background:var(--bg);color:var(--text);transition:background .3s ease}
+    header{background:linear-gradient(90deg,#2563eb,#1d4ed8);color:white;padding:14px 16px;border-radius:14px;max-width:1100px;margin:0 auto 8px}
     h1{font-size:18px;margin:0}
     .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 1px 4px rgba(15,23,42,0.08);margin-top:12px}
     label{display:block;margin-top:8px;font-size:13px;color:#334155}
     input[type=text],input[type=password],input[type=number],input[type=datetime-local],select,textarea{
       width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px;background:#f8fafc
     }
-    button{background:var(--primary);color:white;border:0;padding:8px 12px;border-radius:8px;font-weight:600;margin-top:10px;cursor:pointer}
-    button.ghost{background:transparent;color:var(--text);border:1px solid #e2e8f0}
+    button{background:var(--primary);color:white;border:0;padding:8px 12px;border-radius:999px;font-weight:600;margin-top:10px;cursor:pointer}
+    button.ghost{background:transparent;color:var(--text);border:1px solid #e2e8f0;border-radius:999px}
     .row{display:flex;gap:8px;flex-wrap:wrap}
     .row .col{flex:1;min-width:160px}
     .movement{position:relative;padding:10px;border:1px solid #e6eef8;border-radius:8px;margin-bottom:8px;background:#fff}
@@ -47,6 +47,14 @@
     }
     #app{display:none}
     #rolePicker{display:none}
+
+    /* ===== COLORES POR ROL ===== */
+    body.role-encargado { --primary:#2563eb; --bg:#e9f1ff; }
+    body.role-preparado { --primary:#16a34a; --bg:#e8f6ec; }
+    body.role-fletero   { --primary:#f97316; --bg:#fff1e8; }
+
+    body.role-preparado header{background:linear-gradient(90deg,#16a34a,#15803d);}
+    body.role-fletero header{background:linear-gradient(90deg,#f97316,#ea580c);}
   </style>
 </head>
 <body>
@@ -71,13 +79,19 @@
 <!-- ELEGIR ROL LA PRIMERA VEZ -->
 <div class="card" id="rolePicker">
   <h2 style="margin-top:0;font-size:15px">Seleccioná tu rol</h2>
-  <p style="margin:0 0 6px 0">No encontramos tu rol. Elegí uno:</p>
+  <p style="margin:0 0 6px 0">No encontramos tu rol en el sistema. Elegí uno:</p>
   <div class="row">
-    <div class="col"><button onclick="saveRole('encargado')">Soy ENCARGADO</button></div>
-    <div class="col"><button onclick="saveRole('preparado')">Soy PREPARADO</button></div>
-    <div class="col"><button onclick="saveRole('fletero')">Soy FLETERO</button></div>
+    <div class="col">
+      <button onclick="saveRole('encargado')">Soy ENCARGADO</button>
+    </div>
+    <div class="col">
+      <button onclick="saveRole('preparado')">Soy PREPARADO</button>
+    </div>
+    <div class="col">
+      <button onclick="saveRole('fletero')">Soy FLETERO</button>
+    </div>
   </div>
-  <small>Esto se guarda en Firestore y no lo pide más.</small>
+  <small>Esto se guarda una sola vez.</small>
 </div>
 
 <!-- APP PRINCIPAL -->
@@ -225,6 +239,7 @@
   auth.onAuthStateChanged(async (user)=>{
     currentUser = user;
     if(!user){
+      document.body.className = '';
       $('loginBox').style.display = 'block';
       $('app').style.display = 'none';
       $('rolePicker').style.display = 'none';
@@ -262,9 +277,15 @@
     $('app').style.display = 'block';
     $('userRole').textContent = 'Rol: ' + rol;
 
+    // fondo por rol
+    document.body.className = '';
+    if(rol === 'encargado') document.body.classList.add('role-encargado');
+    if(rol === 'preparado') document.body.classList.add('role-preparado');
+    if(rol === 'fletero')   document.body.classList.add('role-fletero');
+
     $('encargadoBox').style.display = (rol === 'encargado') ? 'block' : 'none';
     $('preparadoBox').style.display = (rol === 'preparado') ? 'block' : 'none';
-    $('fleteroBox').style.display   = (rol === 'fletero') ? 'block' : 'none';
+    $('fleteroBox').style.display   = (rol === 'fletero')   ? 'block' : 'none';
   }
 
   // CREAR MOVIMIENTO (encargado)
@@ -334,6 +355,7 @@
         const div = document.createElement('div');
         div.className = 'movement';
         const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
+
         div.innerHTML = `
           <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
             <div>
@@ -360,7 +382,7 @@
 
         const actionsDiv = div.querySelector(`#actions-${doc.id}`);
 
-        // PREPARADO: puede marcar listo + horario
+        // PREPARADO
         if (currentRole === 'preparado') {
           const btnListo = document.createElement('button');
           btnListo.className = 'ghost';
@@ -375,7 +397,7 @@
           actionsDiv.appendChild(btnHorario);
         }
 
-        // FLETERO: solo mueve si ya está listo
+        // FLETERO
         if (currentRole === 'fletero') {
           if (d.estado === 'Listo para retirar' || d.estado === 'En viaje') {
             const btnTomar = document.createElement('button');
@@ -402,7 +424,7 @@
           }
         }
 
-        // ENCARGADO: puede borrar los que creó él
+        // ENCARGADO: puede borrar lo que creó él
         if (currentRole === 'encargado' && currentUser && d.creadoPorUid === currentUser.uid) {
           const x = document.createElement('button');
           x.textContent = '×';
@@ -457,7 +479,7 @@
     await db.collection(COL_MOV).doc(id).delete();
   }
 
-  // exponer (por si hace falta en HTML)
+  // expongo
   window.saveRole = saveRole;
   window.assignFletero = assignFletero;
   window.setEstado = setEstado;
