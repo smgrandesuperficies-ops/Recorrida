@@ -48,7 +48,7 @@
     #app{display:none}
     #rolePicker{display:none}
 
-    /* ===== COLORES POR ROL ===== */
+    /* colores por rol */
     body.role-encargado { --primary:#2563eb; --bg:#e9f1ff; }
     body.role-preparado { --primary:#16a34a; --bg:#e8f6ec; }
     body.role-fletero   { --primary:#f97316; --bg:#fff1e8; }
@@ -76,25 +76,19 @@
   <small style="display:block;margin-top:6px">Encargados, Preparado y Fleteros se loguean acá.</small>
 </div>
 
-<!-- ELEGIR ROL LA PRIMERA VEZ -->
+<!-- ELEGIR ROL -->
 <div class="card" id="rolePicker">
   <h2 style="margin-top:0;font-size:15px">Seleccioná tu rol</h2>
   <p style="margin:0 0 6px 0">No encontramos tu rol en el sistema. Elegí uno:</p>
   <div class="row">
-    <div class="col">
-      <button onclick="saveRole('encargado')">Soy ENCARGADO</button>
-    </div>
-    <div class="col">
-      <button onclick="saveRole('preparado')">Soy PREPARADO</button>
-    </div>
-    <div class="col">
-      <button onclick="saveRole('fletero')">Soy FLETERO</button>
-    </div>
+    <div class="col"><button onclick="saveRole('encargado')">Soy ENCARGADO</button></div>
+    <div class="col"><button onclick="saveRole('preparado')">Soy PREPARADO</button></div>
+    <div class="col"><button onclick="saveRole('fletero')">Soy FLETERO</button></div>
   </div>
   <small>Esto se guarda una sola vez.</small>
 </div>
 
-<!-- APP PRINCIPAL -->
+<!-- APP -->
 <div id="app">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px">
     <div>
@@ -171,7 +165,7 @@
       <label>Mi nombre (fletero)
         <input id="fleteroNombre" type="text" placeholder="Ej: Camión 3 - Luis" />
       </label>
-      <small>Solo vas a poder mover los que estén “Listo para retirar”.</small>
+      <small>Podés tomar el pedido y actualizar el estado.</small>
     </div>
   </div>
 
@@ -193,7 +187,6 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 <script>
-  // CONFIG TUYA
   const firebaseConfig = {
     apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
     authDomain: "recorrida-planta.firebaseapp.com",
@@ -235,7 +228,7 @@
 
   $('btnLogout').onclick = () => auth.signOut();
 
-  // ESTADO DE SESIÓN
+  // SESIÓN
   auth.onAuthStateChanged(async (user)=>{
     currentUser = user;
     if(!user){
@@ -259,7 +252,6 @@
     showAppForRole(currentRole);
   });
 
-  // GUARDAR ROL
   async function saveRole(rol){
     if(!currentUser) return;
     await db.collection(COL_USERS).doc(currentUser.uid).set({
@@ -277,7 +269,6 @@
     $('app').style.display = 'block';
     $('userRole').textContent = 'Rol: ' + rol;
 
-    // fondo por rol
     document.body.className = '';
     if(rol === 'encargado') document.body.classList.add('role-encargado');
     if(rol === 'preparado') document.body.classList.add('role-preparado');
@@ -288,7 +279,7 @@
     $('fleteroBox').style.display   = (rol === 'fletero')   ? 'block' : 'none';
   }
 
-  // CREAR MOVIMIENTO (encargado)
+  // CREAR MOVIMIENTO
   $('btnCreate').onclick = async () => {
     if(currentRole !== 'encargado'){
       alert("Solo un encargado puede crear movimientos");
@@ -319,7 +310,7 @@
     $('obs').value = '';
   };
 
-  // FILTROS por tipo
+  // FILTROS
   $('filter-todos').onclick = () => setTypeFilter("todos");
   $('filter-mp').onclick    = () => setTypeFilter("Materia Prima");
   $('filter-pt').onclick    = () => setTypeFilter("Productos Terminados");
@@ -331,7 +322,7 @@
     if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
   }
 
-  // LISTA EN TIEMPO REAL
+  // LISTA
   db.collection(COL_MOV)
     .orderBy("creadoEn","desc")
     .onSnapshot((snap)=>{
@@ -341,12 +332,11 @@
       snap.forEach(doc=>{
         const d = doc.data();
 
-        // fletero NO ve entregados
+        // fletero no ve entregados
         if (currentRole === 'fletero' && d.estado === 'Entregado') {
           return;
         }
-
-        // aplicar filtro de tipo
+        // filtro por tipo
         if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) {
           return;
         }
@@ -382,7 +372,7 @@
 
         const actionsDiv = div.querySelector(`#actions-${doc.id}`);
 
-        // PREPARADO
+        // PREPARADO puede marcar y cargar hora
         if (currentRole === 'preparado') {
           const btnListo = document.createElement('button');
           btnListo.className = 'ghost';
@@ -397,34 +387,40 @@
           actionsDiv.appendChild(btnHorario);
         }
 
-        // FLETERO
+        // FLETERO ahora puede hacer todo
         if (currentRole === 'fletero') {
-          if (d.estado === 'Listo para retirar' || d.estado === 'En viaje') {
-            const btnTomar = document.createElement('button');
-            btnTomar.className = 'ghost';
-            btnTomar.textContent = 'Tomar';
-            btnTomar.onclick = () => assignFletero(doc.id);
-            actionsDiv.appendChild(btnTomar);
+          const btnListo = document.createElement('button');
+          btnListo.className = 'ghost';
+          btnListo.textContent = 'Listo';
+          btnListo.onclick = () => setEstadoPreparado(doc.id);
+          actionsDiv.appendChild(btnListo);
 
-            const btnEnViaje = document.createElement('button');
-            btnEnViaje.className = 'ghost';
-            btnEnViaje.textContent = 'En viaje';
-            btnEnViaje.onclick = () => setEstado(doc.id, 'En viaje');
-            actionsDiv.appendChild(btnEnViaje);
+          const btnHorario = document.createElement('button');
+          btnHorario.className = 'ghost';
+          btnHorario.textContent = 'Hora';
+          btnHorario.onclick = () => setHorarioEstimado(doc.id);
+          actionsDiv.appendChild(btnHorario);
 
-            const btnEntregado = document.createElement('button');
-            btnEntregado.className = 'ghost';
-            btnEntregado.textContent = 'Entregado';
-            btnEntregado.onclick = () => setEstado(doc.id, 'Entregado');
-            actionsDiv.appendChild(btnEntregado);
-          } else {
-            const lbl = document.createElement('small');
-            lbl.textContent = 'Esperando preparación...';
-            actionsDiv.appendChild(lbl);
-          }
+          const btnTomar = document.createElement('button');
+          btnTomar.className = 'ghost';
+          btnTomar.textContent = 'Tomar';
+          btnTomar.onclick = () => assignFletero(doc.id);
+          actionsDiv.appendChild(btnTomar);
+
+          const btnEnViaje = document.createElement('button');
+          btnEnViaje.className = 'ghost';
+          btnEnViaje.textContent = 'En viaje';
+          btnEnViaje.onclick = () => setEstado(doc.id, 'En viaje');
+          actionsDiv.appendChild(btnEnViaje);
+
+          const btnEntregado = document.createElement('button');
+          btnEntregado.className = 'ghost';
+          btnEntregado.textContent = 'Entregado';
+          btnEntregado.onclick = () => setEstado(doc.id, 'Entregado');
+          actionsDiv.appendChild(btnEntregado);
         }
 
-        // ENCARGADO: puede borrar lo que creó él
+        // ENCARGADO puede borrar los que creó él
         if (currentRole === 'encargado' && currentUser && d.creadoPorUid === currentUser.uid) {
           const x = document.createElement('button');
           x.textContent = '×';
@@ -455,15 +451,15 @@
   }
 
   async function setEstadoPreparado(id){
-    if(currentRole !== 'preparado'){ alert("Solo preparado puede hacer esto"); return; }
+    if(!currentUser){ alert("Iniciá sesión"); return; }
     await db.collection(COL_MOV).doc(id).update({
       estado: "Listo para retirar"
     });
   }
 
   async function setHorarioEstimado(id){
-    if(currentRole !== 'preparado'){ alert("Solo preparado puede hacer esto"); return; }
-    let hora = $('defaultHora').value;
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    let hora = $('defaultHora') ? $('defaultHora').value : '';
     if(!hora){
       hora = prompt("Ingresá fecha y hora (formato 2025-11-06T15:30):","");
       if(!hora) return;
@@ -479,7 +475,6 @@
     await db.collection(COL_MOV).doc(id).delete();
   }
 
-  // expongo
   window.saveRole = saveRole;
   window.assignFletero = assignFletero;
   window.setEstado = setEstado;
