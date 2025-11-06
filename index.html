@@ -5,24 +5,42 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Movimientos de Planta — Sistema interno</title>
   <style>
-    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
-    body{margin:0;padding:16px;background:#eef1f5;color:#0b1720}
-    header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+    :root{
+      --bg: #edf2f7;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --text: #0f172a;
+      --muted: #6b7280;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+    }
+    body{margin:0;padding:16px;background:var(--bg);color:var(--text)}
+    header{background:linear-gradient(90deg,#2563eb,#1d4ed8);color:white;padding:14px 16px;border-radius:14px;max-width:1100px;margin:0 auto}
     h1{font-size:18px;margin:0}
-    .card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 4px rgba(10,20,30,0.06);margin-top:12px}
+    .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 1px 4px rgba(15,23,42,0.08);margin-top:12px}
     label{display:block;margin-top:8px;font-size:13px;color:#334155}
-    input[type=text],input[type=password],input[type=number],select,textarea{width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px}
-    button{background:#0b74ff;color:white;border:0;padding:8px 12px;border-radius:8px;font-weight:600;margin-top:10px;cursor:pointer}
-    button.ghost{background:transparent;color:#0b1720;border:1px solid #e2e8f0}
+    input[type=text],input[type=password],input[type=number],input[type=datetime-local],select,textarea{
+      width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px;background:#f8fafc
+    }
+    button{background:var(--primary);color:white;border:0;padding:8px 12px;border-radius:8px;font-weight:600;margin-top:10px;cursor:pointer}
+    button.ghost{background:transparent;color:var(--text);border:1px solid #e2e8f0}
     .row{display:flex;gap:8px;flex-wrap:wrap}
     .row .col{flex:1;min-width:160px}
-    .movement{padding:10px;border:1px solid #e6eef8;border-radius:8px;margin-bottom:8px;background:#fff}
+    .movement{position:relative;padding:10px;border:1px solid #e6eef8;border-radius:8px;margin-bottom:8px;background:#fff}
     .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
     .estado-Pendiente{background:#fee4e2;color:#b42318}
+    .estado-Listo\ para\ retirar{background:#fef9c3;color:#854d0e}
     .estado-En\ viaje{background:#eff8ff;color:#175cd3}
     .estado-Entregado{background:#ecfdf3;color:#027a48}
-    small{color:#6b7280}
+    small{color:var(--muted)}
     .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .delete-x{
+      position:absolute;top:6px;right:6px;
+      background:#f97316;color:white;border:none;border-radius:999px;
+      width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;font-weight:bold
+    }
+    .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+    .filter-active{background:#0f172a;color:white;border-color:transparent}
     @media(min-width:900px){
       .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
       body{max-width:1100px;margin:0 auto;}
@@ -47,25 +65,22 @@
   </label>
   <button id="btnLogin">Ingresar</button>
   <button id="btnRegister" class="ghost">Crear cuenta</button>
-  <small style="display:block;margin-top:6px">Cada encargado / fletero puede tener su usuario.</small>
+  <small style="display:block;margin-top:6px">Encargados, Preparado y Fleteros se loguean acá.</small>
 </div>
 
-<!-- ELEGIR ROL -->
+<!-- ELEGIR ROL LA PRIMERA VEZ -->
 <div class="card" id="rolePicker">
   <h2 style="margin-top:0;font-size:15px">Seleccioná tu rol</h2>
-  <p style="margin:0 0 6px 0">No encontramos tu rol en el sistema. Elegí uno:</p>
+  <p style="margin:0 0 6px 0">No encontramos tu rol. Elegí uno:</p>
   <div class="row">
-    <div class="col">
-      <button onclick="saveRole('encargado')">Soy ENCARGADO</button>
-    </div>
-    <div class="col">
-      <button onclick="saveRole('fletero')">Soy FLETERO</button>
-    </div>
+    <div class="col"><button onclick="saveRole('encargado')">Soy ENCARGADO</button></div>
+    <div class="col"><button onclick="saveRole('preparado')">Soy PREPARADO</button></div>
+    <div class="col"><button onclick="saveRole('fletero')">Soy FLETERO</button></div>
   </div>
-  <small>Esto se guarda una sola vez.</small>
+  <small>Esto se guarda en Firestore y no lo pide más.</small>
 </div>
 
-<!-- APP -->
+<!-- APP PRINCIPAL -->
 <div id="app">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px">
     <div>
@@ -113,11 +128,27 @@
           </label>
         </div>
       </div>
+      <label>Tipo de viaje
+        <select id="tipoViaje">
+          <option value="Materia Prima">Materia Prima</option>
+          <option value="Productos Terminados">Productos Terminados</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </label>
       <label>Observaciones
-        <textarea id="obs" rows="2" placeholder="Algo a tener en cuenta para el fletero..."></textarea>
+        <textarea id="obs" rows="2" placeholder="Algo a tener en cuenta..."></textarea>
       </label>
       <button id="btnCreate">Crear movimiento</button>
       <small style="display:block;margin-top:6px">Se crea con estado <strong>Pendiente</strong>.</small>
+    </div>
+
+    <!-- PREPARADO -->
+    <div class="card" id="preparadoBox">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Panel de preparado</h2>
+      <small>Marcás los pedidos como “Listo para retirar” y podés poner horario estimado.</small>
+      <label>Horario estimado por defecto
+        <input id="defaultHora" type="datetime-local" />
+      </label>
     </div>
 
     <!-- FLETERO -->
@@ -126,13 +157,18 @@
       <label>Mi nombre (fletero)
         <input id="fleteroNombre" type="text" placeholder="Ej: Camión 3 - Luis" />
       </label>
-      <small>Se usa cuando tomás o cambiás estado.</small>
+      <small>Solo vas a poder mover los que estén “Listo para retirar”.</small>
     </div>
   </div>
 
   <!-- LISTA -->
   <div class="card" style="margin-top:12px">
     <h2 style="margin:0 0 6px 0;font-size:15px">Movimientos registrados</h2>
+    <div class="filter-bar">
+      <button class="ghost filter-active" id="filter-todos">Todos</button>
+      <button class="ghost" id="filter-mp">Materia Prima</button>
+      <button class="ghost" id="filter-pt">Productos Terminados</button>
+    </div>
     <div id="movList"></div>
     <small id="movCount"></small>
   </div>
@@ -163,17 +199,15 @@
 
   let currentUser = null;
   let currentRole = null;
+  let currentTypeFilter = "todos";
 
   // LOGIN
   $('btnLogin').onclick = async () => {
     const email = $('loginEmail').value.trim();
     const pass = $('loginPass').value.trim();
     if(!email || !pass){ alert("Completá email y contraseña"); return; }
-    try {
-      await auth.signInWithEmailAndPassword(email, pass);
-    } catch(e){
-      alert("Error al ingresar: " + e.message);
-    }
+    try { await auth.signInWithEmailAndPassword(email, pass); }
+    catch(e){ alert("Error al ingresar: " + e.message); }
   };
 
   // REGISTRO
@@ -181,17 +215,13 @@
     const email = $('loginEmail').value.trim();
     const pass = $('loginPass').value.trim();
     if(!email || !pass){ alert("Completá email y contraseña"); return; }
-    try {
-      await auth.createUserWithEmailAndPassword(email, pass);
-      // el onAuthStateChanged va a mostrar el selector de rol
-    } catch(e){
-      alert("Error al crear usuario: " + e.message);
-    }
+    try { await auth.createUserWithEmailAndPassword(email, pass); }
+    catch(e){ alert("Error al crear usuario: " + e.message); }
   };
 
   $('btnLogout').onclick = () => auth.signOut();
 
-  // CUANDO CAMBIA EL USUARIO
+  // ESTADO DE SESIÓN
   auth.onAuthStateChanged(async (user)=>{
     currentUser = user;
     if(!user){
@@ -200,15 +230,12 @@
       $('rolePicker').style.display = 'none';
       return;
     }
-
     $('loginBox').style.display = 'none';
     $('userInfo').textContent = user.email;
 
-    // buscar rol
     const ref = db.collection(COL_USERS).doc(user.uid);
     const doc = await ref.get();
     if(!doc.exists){
-      // no tiene rol
       $('rolePicker').style.display = 'block';
       $('app').style.display = 'none';
       return;
@@ -235,19 +262,12 @@
     $('app').style.display = 'block';
     $('userRole').textContent = 'Rol: ' + rol;
 
-    if(rol === 'encargado'){
-      $('encargadoBox').style.display = 'block';
-      $('fleteroBox').style.display = 'none';
-    } else if(rol === 'fletero'){
-      $('encargadoBox').style.display = 'none';
-      $('fleteroBox').style.display = 'block';
-    } else {
-      $('encargadoBox').style.display = 'none';
-      $('fleteroBox').style.display = 'none';
-    }
+    $('encargadoBox').style.display = (rol === 'encargado') ? 'block' : 'none';
+    $('preparadoBox').style.display = (rol === 'preparado') ? 'block' : 'none';
+    $('fleteroBox').style.display   = (rol === 'fletero') ? 'block' : 'none';
   }
 
-  // CREAR MOVIMIENTO (solo encargado lo ve)
+  // CREAR MOVIMIENTO (encargado)
   $('btnCreate').onclick = async () => {
     if(currentRole !== 'encargado'){
       alert("Solo un encargado puede crear movimientos");
@@ -261,9 +281,11 @@
       descripcion: $('descripcion').value.trim(),
       cantidad: Number($('cantidad').value || 0),
       prioridad: $('prioridad').value,
+      tipoViaje: $('tipoViaje').value,
       obs: $('obs').value.trim(),
       estado: "Pendiente",
       fletero: null,
+      horarioEstimado: null,
       creadoPorUid: currentUser ? currentUser.uid : null
     };
     if(!mov.encargado || !mov.descripcion){
@@ -276,20 +298,42 @@
     $('obs').value = '';
   };
 
+  // FILTROS por tipo
+  $('filter-todos').onclick = () => setTypeFilter("todos");
+  $('filter-mp').onclick    = () => setTypeFilter("Materia Prima");
+  $('filter-pt').onclick    = () => setTypeFilter("Productos Terminados");
+  function setTypeFilter(val){
+    currentTypeFilter = val;
+    ['filter-todos','filter-mp','filter-pt'].forEach(id => $(id).classList.remove('filter-active'));
+    if(val === 'todos') $('filter-todos').classList.add('filter-active');
+    if(val === 'Materia Prima') $('filter-mp').classList.add('filter-active');
+    if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
+  }
+
   // LISTA EN TIEMPO REAL
   db.collection(COL_MOV)
     .orderBy("creadoEn","desc")
     .onSnapshot((snap)=>{
       const cont = $('movList');
-      if(!cont) return;
       cont.innerHTML = '';
       let count = 0;
       snap.forEach(doc=>{
-        count++;
         const d = doc.data();
-        const estadoClass = 'estado-' + d.estado.replace(' ', '\\ ');
+
+        // fletero NO ve entregados
+        if (currentRole === 'fletero' && d.estado === 'Entregado') {
+          return;
+        }
+
+        // aplicar filtro de tipo
+        if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) {
+          return;
+        }
+
+        count++;
         const div = document.createElement('div');
         div.className = 'movement';
+        const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
         div.innerHTML = `
           <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
             <div>
@@ -306,47 +350,119 @@
           <div style="margin-top:4px">
             <small>Cant:</small> ${d.cantidad || 0} |
             <small>Prioridad:</small> ${d.prioridad || '—'} |
+            <small>Tipo:</small> ${d.tipoViaje || '—'} |
             <small>Fletero:</small> ${d.fletero || '—'}
           </div>
+          ${d.horarioEstimado ? `<div style="margin-top:4px"><small>Horario estimado:</small> ${new Date(d.horarioEstimado).toLocaleString()}</div>` : ''}
           ${d.obs ? `<div style="margin-top:4px"><small>Obs:</small> ${d.obs}</div>` : ''}
-          <div class="actions">
-            <button class="ghost" onclick="assignFletero('${doc.id}')">Tomar</button>
-            <button class="ghost" onclick="setEstado('${doc.id}', 'En viaje')">En viaje</button>
-            <button class="ghost" onclick="setEstado('${doc.id}', 'Entregado')">Entregado</button>
-            ${currentRole === 'encargado' ? `<button class="ghost" onclick="deleteMov('${doc.id}')">Eliminar</button>` : ''}
-          </div>
+          <div class="actions" id="actions-${doc.id}"></div>
         `;
+
+        const actionsDiv = div.querySelector(`#actions-${doc.id}`);
+
+        // PREPARADO: puede marcar listo + horario
+        if (currentRole === 'preparado') {
+          const btnListo = document.createElement('button');
+          btnListo.className = 'ghost';
+          btnListo.textContent = 'Listo para retirar';
+          btnListo.onclick = () => setEstadoPreparado(doc.id);
+          actionsDiv.appendChild(btnListo);
+
+          const btnHorario = document.createElement('button');
+          btnHorario.className = 'ghost';
+          btnHorario.textContent = 'Cargar horario';
+          btnHorario.onclick = () => setHorarioEstimado(doc.id);
+          actionsDiv.appendChild(btnHorario);
+        }
+
+        // FLETERO: solo mueve si ya está listo
+        if (currentRole === 'fletero') {
+          if (d.estado === 'Listo para retirar' || d.estado === 'En viaje') {
+            const btnTomar = document.createElement('button');
+            btnTomar.className = 'ghost';
+            btnTomar.textContent = 'Tomar';
+            btnTomar.onclick = () => assignFletero(doc.id);
+            actionsDiv.appendChild(btnTomar);
+
+            const btnEnViaje = document.createElement('button');
+            btnEnViaje.className = 'ghost';
+            btnEnViaje.textContent = 'En viaje';
+            btnEnViaje.onclick = () => setEstado(doc.id, 'En viaje');
+            actionsDiv.appendChild(btnEnViaje);
+
+            const btnEntregado = document.createElement('button');
+            btnEntregado.className = 'ghost';
+            btnEntregado.textContent = 'Entregado';
+            btnEntregado.onclick = () => setEstado(doc.id, 'Entregado');
+            actionsDiv.appendChild(btnEntregado);
+          } else {
+            const lbl = document.createElement('small');
+            lbl.textContent = 'Esperando preparación...';
+            actionsDiv.appendChild(lbl);
+          }
+        }
+
+        // ENCARGADO: puede borrar los que creó él
+        if (currentRole === 'encargado' && currentUser && d.creadoPorUid === currentUser.uid) {
+          const x = document.createElement('button');
+          x.textContent = '×';
+          x.className = 'delete-x';
+          x.onclick = () => deleteMov(doc.id);
+          div.appendChild(x);
+        }
+
         cont.appendChild(div);
       });
       $('movCount').textContent = count ? `${count} movimientos` : 'No hay movimientos aún';
     });
 
-  // ACCIONES DEL FLETERO / ENCARGADO
+  // ACCIONES
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
-    const nombre = $('fleteroNombre').value.trim() || currentUser.email;
-    await db.collection(COL_MOV).doc(id).update({
-      fletero: nombre
-    });
+    const nombre = $('fleteroNombre') ? $('fleteroNombre').value.trim() : '';
+    const finalName = nombre || currentUser.email;
+    await db.collection(COL_MOV).doc(id).update({ fletero: finalName });
   }
+
   async function setEstado(id, estado){
     if(!currentUser){ alert("Iniciá sesión"); return; }
-    const nombre = $('fleteroNombre').value.trim() || currentUser.email;
+    const nombre = $('fleteroNombre') ? $('fleteroNombre').value.trim() : '';
     const data = { estado: estado };
     if(nombre) data.fletero = nombre;
     await db.collection(COL_MOV).doc(id).update(data);
   }
-  async function deleteMov(id){
-    if(currentRole !== 'encargado'){
-      alert("Solo un encargado puede eliminar");
-      return;
-    }
-    if(confirm("¿Eliminar este movimiento?")){
-      await db.collection(COL_MOV).doc(id).delete();
-    }
+
+  async function setEstadoPreparado(id){
+    if(currentRole !== 'preparado'){ alert("Solo preparado puede hacer esto"); return; }
+    await db.collection(COL_MOV).doc(id).update({
+      estado: "Listo para retirar"
+    });
   }
+
+  async function setHorarioEstimado(id){
+    if(currentRole !== 'preparado'){ alert("Solo preparado puede hacer esto"); return; }
+    let hora = $('defaultHora').value;
+    if(!hora){
+      hora = prompt("Ingresá fecha y hora (formato 2025-11-06T15:30):","");
+      if(!hora) return;
+    }
+    await db.collection(COL_MOV).doc(id).update({
+      horarioEstimado: hora
+    });
+  }
+
+  async function deleteMov(id){
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    if(!confirm("¿Eliminar este movimiento?")) return;
+    await db.collection(COL_MOV).doc(id).delete();
+  }
+
+  // exponer (por si hace falta en HTML)
+  window.saveRole = saveRole;
   window.assignFletero = assignFletero;
   window.setEstado = setEstado;
+  window.setEstadoPreparado = setEstadoPreparado;
+  window.setHorarioEstimado = setHorarioEstimado;
   window.deleteMov = deleteMov;
 </script>
 </body>
