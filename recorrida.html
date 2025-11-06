@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Recorrida de Planta - Interactiva</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;padding:16px;background:#f4f6f8;color:#0b1720}
+    header{display:flex;align-items:center;gap:12px}
+    h1{font-size:18px;margin:0}
+    .card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 4px rgba(10,20,30,0.06);margin-top:12px}
+    label{display:block;margin-top:8px;font-size:13px;color:#334155}
+    input[type=text],select,textarea{width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px}
+    button{background:#0b74ff;color:white;border:0;padding:10px 12px;border-radius:8px;font-weight:600;margin-top:10px;cursor:pointer}
+    button.ghost{background:transparent;color:#0b1720;border:1px solid #e2e8f0}
+    .row{display:flex;gap:8px}
+    .row .col{flex:1}
+    .entry{padding:10px;border-radius:8px;border:1px solid #e6eef8;margin-bottom:8px;background:linear-gradient(180deg,#fff,#fbfeff)}
+    .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    .photo-thumb{height:60px;border-radius:6px;object-fit:cover;margin-top:8px}
+    @media(min-width:700px){body{max-width:900px;margin:16px auto}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Recorrida de Planta — Registro Compartido</h1>
+</header>
+
+<div class="card">
+  <label>Inspector / Responsable
+    <input id="inspector" type="text" placeholder="Nombre del inspector" />
+  </label>
+
+  <div class="row">
+    <div class="col">
+      <label>Área / Zona
+        <input id="area" type="text" placeholder="Ej: Línea 1, Tanque A" />
+      </label>
+    </div>
+    <div class="col">
+      <label>Punto de inspección
+        <input id="punto" type="text" placeholder="Máquina/ubicación específica" />
+      </label>
+    </div>
+  </div>
+
+  <label>Checklist / Ítem
+    <input id="item" type="text" placeholder="Descripción corta del ítem" />
+  </label>
+
+  <div class="row">
+    <div class="col">
+      <label>Estado
+        <select id="estado">
+          <option value="OK">OK</option>
+          <option value="No OK">No OK</option>
+          <option value="N/A">N/A</option>
+        </select>
+      </label>
+    </div>
+    <div class="col">
+      <label>Prioridad
+        <select id="prioridad">
+          <option>Media</option>
+          <option>Alta</option>
+          <option>Baja</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <label>Observaciones
+    <textarea id="obs" rows="3" placeholder="Notas, acciones necesarias..."></textarea>
+  </label>
+
+  <label>Foto (opcional)
+    <input id="foto" type="file" accept="image/*" capture="environment" />
+  </label>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+    <button id="btnSave">Guardar entrada</button>
+  </div>
+
+  <small>Los datos se guardan en la nube (Firestore). Todos los que abran la página ven lo mismo.</small>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3 style="margin-top:0">Entradas registradas</h3>
+  <div id="entries"></div>
+  <small id="count"></small>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+
+<script>
+  // Tu configuración oficial de Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
+    authDomain: "recorrida-planta.firebaseapp.com",
+    projectId: "recorrida-planta",
+    storageBucket: "recorrida-planta.firebasestorage.app",
+    messagingSenderId: "528466299629",
+    appId: "1:528466299629:web:e1ebe7fab15d030d6e5ae4",
+    measurementId: "G-XPV4W80QZ2"
+  };
+
+  // Inicializar Firebase y Firestore
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const COL = "recorridas";
+
+  const $ = id => document.getElementById(id);
+
+  function escapeHtml(s){
+    return s ? s
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;') : '';
+  }
+
+  async function getPhotoAsDataURL(fileInput){
+    const f = fileInput.files && fileInput.files[0];
+    if(!f) return null;
+    return new Promise((res, rej)=>{
+      const r = new FileReader();
+      r.onload = ()=> res(r.result);
+      r.onerror = ()=> rej('error reading file');
+      r.readAsDataURL(f);
+    });
+  }
+
+  async function getGPS(){
+    if(!navigator.geolocation) return null;
+    return new Promise((res)=>{
+      navigator.geolocation.getCurrentPosition(pos=>{
+        res({lat: pos.coords.latitude, lon: pos.coords.longitude});
+      }, err=>{
+        res(null);
+      }, {timeout:5000, maximumAge:60000});
+    });
+  }
+
+  $('btnSave').onclick = async ()=>{
+    const data = {
+      fecha: new Date().toISOString(),
+      inspector: $('inspector').value.trim(),
+      area: $('area').value.trim(),
+      punto: $('punto').value.trim(),
+      item: $('item').value.trim(),
+      estado: $('estado').value,
+      prioridad: $('prioridad').value,
+      obs: $('obs').value.trim(),
+      foto: null,
+      gps_lat: null,
+      gps_lon: null
+    };
+
+    try {
+      data.foto = await getPhotoAsDataURL($('foto'));
+    } catch(e){ console.warn(e); }
+
+    const gps = await getGPS();
+    if(gps){
+      data.gps_lat = gps.lat;
+      data.gps_lon = gps.lon;
+    }
+
+    await db.collection(COL).add(data);
+
+    $('item').value = '';
+    $('obs').value = '';
+    $('foto').value = '';
+  };
+
+  // Escucha en tiempo real
+  db.collection(COL)
+    .orderBy("fecha","desc")
+    .onSnapshot((snap)=>{
+      const entries = $('entries');
+      entries.innerHTML = '';
+      let count = 0;
+      snap.forEach(doc=>{
+        const e = doc.data();
+        count++;
+        const div = document.createElement('div');
+        div.className = 'entry';
+        div.innerHTML = `
+          <strong>${e.item || '(sin ítem)'} — <small>${e.estado}</small></strong>
+          <div class="meta">
+            <small>${e.inspector || '—'}</small>
+            <small>Área: ${e.area || '—'}</small>
+            <small>${new Date(e.fecha).toLocaleString()}</small>
+            <small>Prioridad: ${e.prioridad || '—'}</small>
+          </div>
+          ${e.obs ? `<div style="margin-top:6px">${escapeHtml(e.obs)}</div>` : ''}
+          ${e.gps_lat ? `<small>GPS: ${Number(e.gps_lat).toFixed(5)}, ${Number(e.gps_lon).toFixed(5)}</small>` : ''}
+          ${e.foto ? `<div><img src="${e.foto}" class="photo-thumb" /></div>` : ''}
+          <div style="margin-top:6px">
+            <button class="ghost" onclick="deleteEntry('${doc.id}')">Eliminar</button>
+          </div>
+        `;
+        entries.appendChild(div);
+      });
+      $('count').textContent = count ? count + ' entradas' : 'No hay entradas aún';
+    });
+
+  async function deleteEntry(id){
+    if(confirm('¿Eliminar esta entrada?')){
+      await db.collection(COL).doc(id).delete();
+    }
+  }
+  window.deleteEntry = deleteEntry;
+</script>
+</body>
+</html>
