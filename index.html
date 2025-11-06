@@ -165,7 +165,7 @@
       <label>Mi nombre (fletero)
         <input id="fleteroNombre" type="text" placeholder="Ej: Camión 3 - Luis" />
       </label>
-      <small>Podés tomar el pedido y actualizar el estado.</small>
+      <small>Tomá el pedido y actualizá el estado.</small>
     </div>
   </div>
 
@@ -207,7 +207,7 @@
   let currentUser = null;
   let currentRole = null;
   let currentTypeFilter = "todos";
-  let unsubscribeMov = null; // <- importante
+  let unsubscribeMov = null;
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -252,7 +252,7 @@
     }
     currentRole = doc.data().rol;
     showAppForRole(currentRole);
-    startMovListener(); // <- ahora sí, ya sabemos el rol
+    startMovListener();
   });
 
   async function saveRole(rol){
@@ -326,7 +326,7 @@
     if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
   }
 
-  // LISTENER DE MOVIMIENTOS (se arma después de tener rol)
+  // LISTENER
   function startMovListener(){
     if (!currentUser || !currentRole) return;
     if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
@@ -340,11 +340,9 @@
         snap.forEach(doc=>{
           const d = doc.data();
 
-          // fletero no ve entregados
           if (currentRole === 'fletero' && d.estado === 'Entregado') {
             return;
           }
-          // filtro
           if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) {
             return;
           }
@@ -380,7 +378,7 @@
 
           const actionsDiv = div.querySelector(`#actions-${doc.id}`);
 
-          // PREPARADO
+          // PREPARADO: estos dos son de preparado
           if (currentRole === 'preparado') {
             const btnListo = document.createElement('button');
             btnListo.className = 'ghost';
@@ -395,20 +393,8 @@
             actionsDiv.appendChild(btnHorario);
           }
 
-          // FLETERO – ahora SIEMPRE tiene los botones
+          // FLETERO: solo sus acciones
           if (currentRole === 'fletero') {
-            const btnListo = document.createElement('button');
-            btnListo.className = 'ghost';
-            btnListo.textContent = 'Listo';
-            btnListo.onclick = () => setEstadoPreparado(doc.id);
-            actionsDiv.appendChild(btnListo);
-
-            const btnHorario = document.createElement('button');
-            btnHorario.className = 'ghost';
-            btnHorario.textContent = 'Hora';
-            btnHorario.onclick = () => setHorarioEstimado(doc.id);
-            actionsDiv.appendChild(btnHorario);
-
             const btnTomar = document.createElement('button');
             btnTomar.className = 'ghost';
             btnTomar.textContent = 'Tomar';
@@ -428,7 +414,7 @@
             actionsDiv.appendChild(btnEntregado);
           }
 
-          // ENCARGADO elimina lo suyo
+          // ENCARGADO: borrar lo suyo
           if (currentRole === 'encargado' && currentUser && d.creadoPorUid === currentUser.uid) {
             const x = document.createElement('button');
             x.textContent = '×';
@@ -484,7 +470,6 @@
     await db.collection(COL_MOV).doc(id).delete();
   }
 
-  // expongo
   window.saveRole = saveRole;
   window.assignFletero = assignFletero;
   window.setEstado = setEstado;
