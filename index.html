@@ -57,6 +57,7 @@
     body.role-preparado header{background:linear-gradient(90deg,#16a34a,#15803d);}
     body.role-fletero header{background:linear-gradient(90deg,#f97316,#ea580c);}
     body.role-admin header{background:linear-gradient(90deg,#0f172a,#1f2937);}
+
     .admin-table{width:100%;border-collapse:collapse;margin-top:6px}
     .admin-table th,.admin-table td{border:1px solid #e2e8f0;padding:6px;font-size:13px;text-align:left}
     .date-title{font-size:13px;font-weight:600;margin-top:10px;margin-bottom:4px;color:#0f172a}
@@ -100,10 +101,14 @@
     <div class="col"><button onclick="saveRole('preparado')">Soy PREPARADO</button></div>
     <div class="col"><button onclick="chooseFletero()">Soy FLETERO</button></div>
   </div>
-  <div id="fleteroColorBox">
+
+  <!-- solo se muestra cuando elige fletero -->
+  <div id="fleteroColorBox" style="display:none;margin-top:10px">
     <small>Elegí tu color (solo una vez):</small>
-    <div id="fleteroColorOptions"></div>
+    <div id="fleteroColorOptions" style="margin-top:6px"></div>
+    <button id="btnConfirmFletero" style="margin-top:10px;display:none" onclick="confirmFletero()">Confirmar fletero</button>
   </div>
+
   <small>Esto se guarda una sola vez.</small>
 </div>
 
@@ -240,7 +245,7 @@
   let selectedFleteroColor = null;
 
   let currentUser = null;
-  let currentUserData = null; // acá guardamos su doc de usuarios (rol, color, etc)
+  let currentUserData = null;
   let currentRole = null;
   let currentTypeFilter = "todos";
   let unsubscribeMov = null;
@@ -296,9 +301,10 @@
     const ref = db.collection(COL_USERS).doc(user.uid);
     const doc = await ref.get();
     if(!doc.exists){
-      buildFleteroColorPicker();
+      // no tiene rol todavía → mostrar picker
       $('rolePicker').style.display = 'block';
       $('app').style.display = 'none';
+      buildFleteroColorPicker();
       return;
     }
     currentUserData = doc.data();
@@ -314,7 +320,12 @@
   // construir picker de colores fletero
   function buildFleteroColorPicker(){
     const box = $('fleteroColorOptions');
+    if (!box) return;
     box.innerHTML = '';
+    selectedFleteroColor = null;
+    const btn = $('btnConfirmFletero');
+    if (btn) btn.style.display = 'none';
+
     FLETERO_COLORS.forEach(col=>{
       const div = document.createElement('div');
       div.className = 'color-pill';
@@ -323,25 +334,38 @@
         selectedFleteroColor = col;
         document.querySelectorAll('.color-pill').forEach(p=>p.classList.remove('selected'));
         div.classList.add('selected');
+        if (btn) btn.style.display = 'inline-block';
       };
       box.appendChild(div);
     });
   }
 
   function chooseFletero(){
-    $('fleteroColorBox').style.display = 'block';
+    const box = $('fleteroColorBox');
+    if (box) {
+      box.style.display = 'block';
+      buildFleteroColorPicker();
+    }
+  }
+
+  async function confirmFletero(){
+    if (!selectedFleteroColor){
+      alert("Elegí un color primero.");
+      return;
+    }
+    await saveRole('fletero');
   }
 
   async function saveRole(rol){
     if(!currentUser) return;
 
-    // si es admin, se queda admin
+    // admin fijo
     if (ADMIN_EMAILS.includes(currentUser.email)) {
       await db.collection(COL_USERS).doc(currentUser.uid).set({
         email: currentUser.email,
         rol: 'admin',
         createdAt: new Date().toISOString()
-      });
+      }, { merge: true });
       currentRole = 'admin';
       currentUserData = { email: currentUser.email, rol: 'admin' };
       showAppForRole('admin');
@@ -351,7 +375,7 @@
       return;
     }
 
-    // si eligió fletero, debe elegir color y debe ser único
+    // fletero con color único
     if (rol === 'fletero') {
       if (!selectedFleteroColor) {
         alert("Elegí un color para tu usuario de fletero.");
@@ -371,7 +395,7 @@
       currentRole = 'fletero';
       currentUserData = { email: currentUser.email, rol: 'fletero', color: selectedFleteroColor };
     } else {
-      // encargado o preparado normales
+      // encargado o preparado
       await db.collection(COL_USERS).doc(currentUser.uid).set({
         email: currentUser.email,
         rol: rol,
@@ -384,8 +408,6 @@
     showAppForRole(currentRole);
     startMovListener();
   }
-  window.saveRole = saveRole;
-  window.chooseFletero = chooseFletero;
 
   function showAppForRole(rol){
     $('rolePicker').style.display = 'none';
@@ -452,7 +474,7 @@
     if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
   }
 
-  // nombre del fletero actual (para mostrar)
+  // nombre del fletero actual
   function getCurrentFleteroName() {
     const inp = $('fleteroNombre');
     if (inp && inp.value.trim()) return inp.value.trim();
@@ -495,9 +517,9 @@
           div.className = 'movement';
           const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
 
-          // si este movimiento lo tomó este fletero y tiene color -> lo pintamos
+          // pintar si es el fletero dueño
           if (currentRole === 'fletero' && currentUser && d.fleteroUid === currentUser.uid && currentUserData && currentUserData.color) {
-            div.style.background = currentUserData.color + '22'; // un poco transparente
+            div.style.background = currentUserData.color + '22';
             div.style.borderColor = currentUserData.color;
           }
 
@@ -542,7 +564,7 @@
             actionsDiv.appendChild(btnHorario);
           }
 
-          // FLETERO (con restricción por UID)
+          // FLETERO
           if (currentRole === 'fletero') {
             const btnTomar = document.createElement('button');
             btnTomar.className = 'ghost';
@@ -692,7 +714,10 @@
     await db.collection(COL_USERS).doc(uid).delete();
   }
 
-  // exponer
+  // exponer funciones que usa el HTML
+  window.saveRole = saveRole;
+  window.chooseFletero = chooseFletero;
+  window.confirmFletero = confirmFletero;
   window.deleteUser = deleteUser;
 </script>
 </body>
