@@ -92,7 +92,7 @@
   <small style="display:block;margin-top:6px">Encargados, Preparado y Fleteros se loguean acá.</small>
 </div>
 
-<!-- ELEGIR ROL -->
+<!-- ELEGIR ROL / FLETERO COLOR -->
 <div class="card" id="rolePicker">
   <h2 style="margin-top:0;font-size:15px">Seleccioná tu rol</h2>
   <p style="margin:0 0 6px 0">No encontramos tu rol en el sistema. Elegí uno:</p>
@@ -102,11 +102,10 @@
     <div class="col"><button onclick="chooseFletero()">Soy FLETERO</button></div>
   </div>
 
-  <!-- solo se muestra cuando elige fletero -->
   <div id="fleteroColorBox" style="display:none;margin-top:10px">
     <small>Elegí tu color (solo una vez):</small>
     <div id="fleteroColorOptions" style="margin-top:6px"></div>
-    <button id="btnConfirmFletero" style="margin-top:10px;display:none" onclick="confirmFletero()">Confirmar fletero</button>
+    <button id="btnConfirmFletero" style="margin-top:10px" onclick="confirmFletero()">Aceptar fletero</button>
   </div>
 
   <small>Esto se guarda una sola vez.</small>
@@ -221,6 +220,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 <script>
+  // admin fijo
   const ADMIN_EMAILS = ["gerencia@sagradamadre.com"];
 
   const firebaseConfig = {
@@ -304,7 +304,6 @@
       // no tiene rol todavía → mostrar picker
       $('rolePicker').style.display = 'block';
       $('app').style.display = 'none';
-      buildFleteroColorPicker();
       return;
     }
     currentUserData = doc.data();
@@ -320,11 +319,8 @@
   // construir picker de colores fletero
   function buildFleteroColorPicker(){
     const box = $('fleteroColorOptions');
-    if (!box) return;
     box.innerHTML = '';
     selectedFleteroColor = null;
-    const btn = $('btnConfirmFletero');
-    if (btn) btn.style.display = 'none';
 
     FLETERO_COLORS.forEach(col=>{
       const div = document.createElement('div');
@@ -334,18 +330,14 @@
         selectedFleteroColor = col;
         document.querySelectorAll('.color-pill').forEach(p=>p.classList.remove('selected'));
         div.classList.add('selected');
-        if (btn) btn.style.display = 'inline-block';
       };
       box.appendChild(div);
     });
   }
 
   function chooseFletero(){
-    const box = $('fleteroColorBox');
-    if (box) {
-      box.style.display = 'block';
-      buildFleteroColorPicker();
-    }
+    $('fleteroColorBox').style.display = 'block';
+    buildFleteroColorPicker();
   }
 
   async function confirmFletero(){
@@ -714,7 +706,7 @@
     await db.collection(COL_USERS).doc(uid).delete();
   }
 
-  // exponer funciones que usa el HTML
+  // exponer funciones usadas en HTML
   window.saveRole = saveRole;
   window.chooseFletero = chooseFletero;
   window.confirmFletero = confirmFletero;
