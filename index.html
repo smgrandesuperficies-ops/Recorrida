@@ -1,217 +1,481 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Movimientos de Planta — Sistema Interno</title>
-<style>
-  :root {
-    --bg: #edf2f7;
-    --card: #ffffff;
-    --text: #0f172a;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-  }
-  body { margin:0; padding:16px; background:var(--bg); color:var(--text); transition:background .3s }
-  header { background:linear-gradient(90deg,#2563eb,#1d4ed8); color:#fff; padding:14px 16px; border-radius:14px; max-width:1100px; margin:0 auto 8px }
-  h1 { font-size:18px; margin:0 }
-  .card { background:var(--card); padding:12px; border-radius:10px; box-shadow:0 1px 4px rgba(15,23,42,0.08); margin-top:12px }
-  input,select,textarea { width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; margin-top:6px; background:#f8fafc }
-  button { background:#2563eb; color:#fff; border:0; padding:8px 12px; border-radius:999px; font-weight:600; margin-top:8px; cursor:pointer }
-  button.ghost { background:transparent; color:var(--text); border:1px solid #e2e8f0 }
-  .row{display:flex;gap:8px;flex-wrap:wrap}.row .col{flex:1;min-width:150px}
-  .movement{position:relative;padding:10px;border:1px solid #e6eef8;border-radius:8px;margin-bottom:8px;background:#fff}
-  .delete-x{position:absolute;top:6px;right:6px;background:#dc2626;color:#fff;border:none;border-radius:999px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:bold}
-  small{color:#6b7280}
-  #app{display:none}#rolePicker{display:none}
-  body.role-encargado{--bg:#e9f1ff}body.role-preparado{--bg:#e8f6ec}body.role-fletero{--bg:#fff1e8}body.role-admin{--bg:#e5e7eb}
-  .admin-users{width:100%;border-collapse:collapse;margin-top:8px}
-  .admin-users th,.admin-users td{border:1px solid #e2e8f0;padding:6px;font-size:13px}
-  .admin-users th{background:#f1f5f9;text-align:left}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Movimientos de Planta — Sistema interno</title>
+  <style>
+    :root{
+      --bg: #edf2f7;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --text: #0f172a;
+      --muted: #6b7280;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+    }
+    body{margin:0;padding:16px;background:var(--bg);color:var(--text);transition:background .3s ease}
+    header{background:linear-gradient(90deg,#2563eb,#1d4ed8);color:white;padding:14px 16px;border-radius:14px;max-width:1100px;margin:0 auto 8px}
+    h1{font-size:18px;margin:0}
+    .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 1px 4px rgba(15,23,42,0.08);margin-top:12px}
+    label{display:block;margin-top:8px;font-size:13px;color:#334155}
+    input[type=text],input[type=password],input[type=number],input[type=datetime-local],select,textarea{
+      width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px;background:#f8fafc
+    }
+    button{background:var(--primary);color:white;border:0;padding:8px 12px;border-radius:999px;font-weight:600;margin-top:10px;cursor:pointer}
+    button.ghost{background:transparent;color:var(--text);border:1px solid #e2e8f0;border-radius:999px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .row .col{flex:1;min-width:160px}
+    .movement{position:relative;padding:10px;border:1px solid #e6eef8;border-radius:8px;margin-bottom:8px;background:#fff}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+    .estado-Pendiente{background:#fee4e2;color:#b42318}
+    .estado-Listo\ para\ retirar{background:#fef9c3;color:#854d0e}
+    .estado-En\ viaje{background:#eff8ff;color:#175cd3}
+    .estado-Entregado{background:#ecfdf3;color:#027a48}
+    small{color:var(--muted)}
+    .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .delete-x{
+      position:absolute;top:6px;right:6px;
+      background:#f97316;color:white;border:none;border-radius:999px;
+      width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;font-weight:bold
+    }
+    .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+    .filter-active{background:#0f172a;color:white;border-color:transparent}
+    @media(min-width:900px){
+      .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+      body{max-width:1100px;margin:0 auto;}
+    }
+    #app{display:none}
+    #rolePicker{display:none}
+
+    /* colores por rol */
+    body.role-encargado { --primary:#2563eb; --bg:#e9f1ff; }
+    body.role-preparado { --primary:#16a34a; --bg:#e8f6ec; }
+    body.role-fletero   { --primary:#f97316; --bg:#fff1e8; }
+
+    body.role-preparado header{background:linear-gradient(90deg,#16a34a,#15803d);}
+    body.role-fletero header{background:linear-gradient(90deg,#f97316,#ea580c);}
+  </style>
 </head>
 <body>
-<header><h1>Movimientos de Planta — Sistema Interno</h1></header>
+<header>
+  <h1>Movimientos de Planta — Sistema interno</h1>
+</header>
 
 <!-- LOGIN -->
 <div class="card" id="loginBox">
   <h2 style="margin-top:0;font-size:15px">Ingresar</h2>
-  <label>Email <input id="loginEmail" type="text" placeholder="ejemplo@empresa.com"></label>
-  <label>Contraseña <input id="loginPass" type="password" placeholder="******"></label>
+  <label>Correo
+    <input id="loginEmail" type="text" placeholder="encargado@empresa.com" />
+  </label>
+  <label>Contraseña
+    <input id="loginPass" type="password" placeholder="******" />
+  </label>
   <button id="btnLogin">Ingresar</button>
   <button id="btnRegister" class="ghost">Crear cuenta</button>
+  <small style="display:block;margin-top:6px">Encargados, Preparado y Fleteros se loguean acá.</small>
 </div>
 
 <!-- ELEGIR ROL -->
 <div class="card" id="rolePicker">
   <h2 style="margin-top:0;font-size:15px">Seleccioná tu rol</h2>
-  <p>No encontramos tu rol en el sistema. Elegí uno:</p>
+  <p style="margin:0 0 6px 0">No encontramos tu rol en el sistema. Elegí uno:</p>
   <div class="row">
-    <div class="col"><button onclick="saveRole('encargado')">Encargado</button></div>
-    <div class="col"><button onclick="saveRole('preparado')">Preparado</button></div>
-    <div class="col"><button onclick="saveRole('fletero')">Fletero</button></div>
+    <div class="col"><button onclick="saveRole('encargado')">Soy ENCARGADO</button></div>
+    <div class="col"><button onclick="saveRole('preparado')">Soy PREPARADO</button></div>
+    <div class="col"><button onclick="saveRole('fletero')">Soy FLETERO</button></div>
   </div>
+  <small>Esto se guarda una sola vez.</small>
 </div>
 
 <!-- APP -->
 <div id="app">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px">
-    <div><strong id="userInfo"></strong> <small id="userRole"></small></div>
+    <div>
+      <strong id="userInfo"></strong>
+      <small id="userRole" style="margin-left:4px"></small>
+    </div>
     <button class="ghost" id="btnLogout">Salir</button>
   </div>
 
-  <div id="encargadoBox" class="card">
-    <h2 style="margin:0 0 6px 0;font-size:15px">Alta de movimiento (Encargado)</h2>
-    <label>Encargado <input id="encargado" type="text"></label>
-    <div class="row">
-      <div class="col"><label>Origen <input id="origen" type="text"></label></div>
-      <div class="col"><label>Destino <input id="destino" type="text"></label></div>
+  <div class="grid-2">
+    <!-- ENCARGADO -->
+    <div class="card" id="encargadoBox">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Alta de movimiento (Encargado)</h2>
+      <label>Nombre del encargado
+        <input id="encargado" type="text" placeholder="Ej: Juan Pérez" />
+      </label>
+      <div class="row">
+        <div class="col">
+          <label>Planta / Origen
+            <input id="origen" type="text" placeholder="Ej: Planta 1" />
+          </label>
+        </div>
+        <div class="col">
+          <label>Destino
+            <input id="destino" type="text" placeholder="Ej: Depósito central" />
+          </label>
+        </div>
+      </div>
+      <label>Producto / Descripción
+        <input id="descripcion" type="text" placeholder="Ej: 20 cajas de repuestos" />
+      </label>
+      <div class="row">
+        <div class="col">
+          <label>Cantidad
+            <input id="cantidad" type="number" min="1" value="1" />
+          </label>
+        </div>
+        <div class="col">
+          <label>Prioridad
+            <select id="prioridad">
+              <option value="Media">Media</option>
+              <option value="Alta">Alta</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <label>Tipo de viaje
+        <select id="tipoViaje">
+          <option value="Materia Prima">Materia Prima</option>
+          <option value="Productos Terminados">Productos Terminados</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </label>
+      <label>Observaciones
+        <textarea id="obs" rows="2" placeholder="Algo a tener en cuenta..."></textarea>
+      </label>
+      <button id="btnCreate">Crear movimiento</button>
+      <small style="display:block;margin-top:6px">Se crea con estado <strong>Pendiente</strong>.</small>
     </div>
-    <label>Descripción <input id="descripcion" type="text"></label>
-    <div class="row">
-      <div class="col"><label>Cantidad <input id="cantidad" type="number" min="1" value="1"></label></div>
-      <div class="col"><label>Prioridad 
-        <select id="prioridad"><option>Media</option><option>Alta</option><option>Baja</option></select></label></div>
+
+    <!-- PREPARADO -->
+    <div class="card" id="preparadoBox">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Panel de preparado</h2>
+      <small>Marcás los pedidos como “Listo para retirar” y podés poner horario estimado.</small>
+      <label>Horario estimado por defecto
+        <input id="defaultHora" type="datetime-local" />
+      </label>
     </div>
-    <label>Tipo de viaje 
-      <select id="tipoViaje"><option>Materia Prima</option><option>Productos Terminados</option></select></label>
-    <label>Observaciones <textarea id="obs" rows="2"></textarea></label>
-    <button id="btnCreate">Crear movimiento</button>
+
+    <!-- FLETERO -->
+    <div class="card" id="fleteroBox">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Panel del fletero</h2>
+      <label>Mi nombre (fletero)
+        <input id="fleteroNombre" type="text" placeholder="Ej: Camión 3 - Luis" />
+      </label>
+      <small>Tomá el pedido y actualizá el estado.</small>
+    </div>
   </div>
 
-  <div id="preparadoBox" class="card" style="display:none">
-    <h2>Panel de preparado</h2>
-    <small>Marcá pedidos como “Listo para retirar” y podés agregar horario estimado.</small>
-    <label>Horario estimado por defecto <input id="defaultHora" type="datetime-local"></label>
-  </div>
-
-  <div id="fleteroBox" class="card" style="display:none">
-    <h2>Panel del fletero</h2>
-    <label>Nombre fletero <input id="fleteroNombre" type="text"></label>
-  </div>
-
-  <div id="adminBox" class="card" style="display:none">
-    <h2>Panel de administrador</h2>
-    <small>Solo visible para gerencia@sagradamadre.com</small>
-    <div id="usersList"></div>
-  </div>
-
-  <div class="card">
+  <!-- LISTA -->
+  <div class="card" style="margin-top:12px">
     <h2 style="margin:0 0 6px 0;font-size:15px">Movimientos registrados</h2>
+    <div class="filter-bar">
+      <button class="ghost filter-active" id="filter-todos">Todos</button>
+      <button class="ghost" id="filter-mp">Materia Prima</button>
+      <button class="ghost" id="filter-pt">Productos Terminados</button>
+    </div>
     <div id="movList"></div>
+    <small id="movCount"></small>
   </div>
 </div>
 
-<!-- FIREBASE -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 <script>
-const ADMIN_EMAILS = ["gerencia@sagradamadre.com"];
-const firebaseConfig = {
-  apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
-  authDomain: "recorrida-planta.firebaseapp.com",
-  projectId: "recorrida-planta",
-  storageBucket: "recorrida-planta.firebasestorage.app",
-  messagingSenderId: "528466299629",
-  appId: "1:528466299629:web:e1ebe7fab15d030d6e5ae4",
-  measurementId: "G-XPV4W80QZ2"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore(), auth = firebase.auth();
-const $ = id=>document.getElementById(id);
-let currentUser=null,currentRole=null,unsubscribeMov=null,unsubscribeUsers=null;
+  const firebaseConfig = {
+    apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
+    authDomain: "recorrida-planta.firebaseapp.com",
+    projectId: "recorrida-planta",
+    storageBucket: "recorrida-planta.firebasestorage.app",
+    messagingSenderId: "528466299629",
+    appId: "1:528466299629:web:e1ebe7fab15d030d6e5ae4",
+    measurementId: "G-XPV4W80QZ2"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
 
-// login
-$('btnLogin').onclick=async()=>{try{await auth.signInWithEmailAndPassword($('loginEmail').value,$('loginPass').value)}catch(e){alert(e.message)}}
-$('btnRegister').onclick=async()=>{try{await auth.createUserWithEmailAndPassword($('loginEmail').value,$('loginPass').value)}catch(e){alert(e.message)}}
-$('btnLogout').onclick=()=>auth.signOut();
+  const $ = id => document.getElementById(id);
+  const COL_MOV = "movimientos";
+  const COL_USERS = "usuarios";
 
-auth.onAuthStateChanged(async user=>{
-  currentUser=user;
-  if(!user){$('loginBox').style.display='block';$('app').style.display='none';return}
-  $('loginBox').style.display='none';$('userInfo').textContent=user.email;
+  let currentUser = null;
+  let currentRole = null;
+  let currentTypeFilter = "todos";
+  let unsubscribeMov = null;
 
-  // si es admin por correo
-  let forcedAdmin=false;
-  if(ADMIN_EMAILS.includes(user.email)){
-    await db.collection("usuarios").doc(user.uid).set({email:user.email,rol:"admin"},{merge:true});
-    forcedAdmin=true;
+  // LOGIN
+  $('btnLogin').onclick = async () => {
+    const email = $('loginEmail').value.trim();
+    const pass = $('loginPass').value.trim();
+    if(!email || !pass){ alert("Completá email y contraseña"); return; }
+    try { await auth.signInWithEmailAndPassword(email, pass); }
+    catch(e){ alert("Error al ingresar: " + e.message); }
+  };
+
+  // REGISTRO
+  $('btnRegister').onclick = async () => {
+    const email = $('loginEmail').value.trim();
+    const pass = $('loginPass').value.trim();
+    if(!email || !pass){ alert("Completá email y contraseña"); return; }
+    try { await auth.createUserWithEmailAndPassword(email, pass); }
+    catch(e){ alert("Error al crear usuario: " + e.message); }
+  };
+
+  $('btnLogout').onclick = () => auth.signOut();
+
+  // SESIÓN
+  auth.onAuthStateChanged(async (user)=>{
+    currentUser = user;
+    if(!user){
+      document.body.className = '';
+      $('loginBox').style.display = 'block';
+      $('app').style.display = 'none';
+      $('rolePicker').style.display = 'none';
+      if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
+      return;
+    }
+    $('loginBox').style.display = 'none';
+    $('userInfo').textContent = user.email;
+
+    const ref = db.collection(COL_USERS).doc(user.uid);
+    const doc = await ref.get();
+    if(!doc.exists){
+      $('rolePicker').style.display = 'block';
+      $('app').style.display = 'none';
+      return;
+    }
+    currentRole = doc.data().rol;
+    showAppForRole(currentRole);
+    startMovListener();
+  });
+
+  async function saveRole(rol){
+    if(!currentUser) return;
+    await db.collection(COL_USERS).doc(currentUser.uid).set({
+      email: currentUser.email,
+      rol: rol,
+      createdAt: new Date().toISOString()
+    });
+    currentRole = rol;
+    showAppForRole(rol);
+    startMovListener();
   }
-  const doc=await db.collection("usuarios").doc(user.uid).get();
-  if(!doc.exists&&!forcedAdmin){$('rolePicker').style.display='block';return}
-  currentRole=forcedAdmin?'admin':doc.data().rol;
-  showAppForRole(currentRole);
-  startMovListener();
-  if(currentRole==='admin') startUsersListener();
-});
+  window.saveRole = saveRole;
 
-async function saveRole(r){
-  if(ADMIN_EMAILS.includes(currentUser.email)) r='admin';
-  await db.collection("usuarios").doc(currentUser.uid).set({email:currentUser.email,rol:r});
-  currentRole=r;showAppForRole(r);startMovListener();
-}
-function showAppForRole(r){
-  $('rolePicker').style.display='none';$('app').style.display='block';
-  $('userRole').textContent="Rol: "+r;
-  $('encargadoBox').style.display=r==='encargado'?'block':'none';
-  $('preparadoBox').style.display=r==='preparado'?'block':'none';
-  $('fleteroBox').style.display=r==='fletero'?'block':'none';
-  $('adminBox').style.display=r==='admin'?'block':'none';
-}
+  function showAppForRole(rol){
+    $('rolePicker').style.display = 'none';
+    $('app').style.display = 'block';
+    $('userRole').textContent = 'Rol: ' + rol;
 
-// crear movimiento
-$('btnCreate').onclick=async()=>{
-  if(currentRole!=='encargado'&&currentRole!=='admin'){alert("Solo encargado o admin");return}
-  const mov={encargado:$('encargado').value,origen:$('origen').value,destino:$('destino').value,
-    descripcion:$('descripcion').value,cantidad:Number($('cantidad').value||0),prioridad:$('prioridad').value,
-    tipoViaje:$('tipoViaje').value,obs:$('obs').value,estado:"Pendiente",creadoEn:new Date().toISOString(),fletero:null};
-  await db.collection("movimientos").add(mov);
-  $('descripcion').value='';$('obs').value='';
-};
+    document.body.className = '';
+    if(rol === 'encargado') document.body.classList.add('role-encargado');
+    if(rol === 'preparado') document.body.classList.add('role-preparado');
+    if(rol === 'fletero')   document.body.classList.add('role-fletero');
 
-// listener movimientos
-function startMovListener(){
-  if(unsubscribeMov)unsubscribeMov();
-  unsubscribeMov=db.collection("movimientos").orderBy("creadoEn","desc")
-  .onSnapshot(snap=>{
-    const cont=$('movList');cont.innerHTML='';snap.forEach(doc=>{
-      const d=doc.data(); if((currentRole==='fletero'||currentRole==='preparado')&&d.estado==='Entregado')return;
-      const div=document.createElement('div');div.className='movement';
-      div.innerHTML=`<strong>${d.descripcion}</strong> — ${d.estado}<br><small>${d.encargado||''}</small>`;
-      if(ADMIN_EMAILS.includes(currentUser.email)){
-        const x=document.createElement('button');x.className='delete-x';x.textContent='×';
-        x.onclick=()=>deleteMov(doc.id);div.appendChild(x);
-      }
-      cont.appendChild(div);
+    $('encargadoBox').style.display = (rol === 'encargado') ? 'block' : 'none';
+    $('preparadoBox').style.display = (rol === 'preparado') ? 'block' : 'none';
+    $('fleteroBox').style.display   = (rol === 'fletero')   ? 'block' : 'none';
+  }
+
+  // CREAR MOVIMIENTO
+  $('btnCreate').onclick = async () => {
+    if(currentRole !== 'encargado'){
+      alert("Solo un encargado puede crear movimientos");
+      return;
+    }
+    const mov = {
+      creadoEn: new Date().toISOString(),
+      encargado: $('encargado').value.trim(),
+      origen: $('origen').value.trim(),
+      destino: $('destino').value.trim(),
+      descripcion: $('descripcion').value.trim(),
+      cantidad: Number($('cantidad').value || 0),
+      prioridad: $('prioridad').value,
+      tipoViaje: $('tipoViaje').value,
+      obs: $('obs').value.trim(),
+      estado: "Pendiente",
+      fletero: null,
+      horarioEstimado: null,
+      creadoPorUid: currentUser ? currentUser.uid : null
+    };
+    if(!mov.encargado || !mov.descripcion){
+      alert("Completá al menos encargado y descripción");
+      return;
+    }
+    await db.collection(COL_MOV).add(mov);
+    $('descripcion').value = '';
+    $('cantidad').value = 1;
+    $('obs').value = '';
+  };
+
+  // FILTROS
+  $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
+  $('filter-mp').onclick    = () => { setTypeFilter("Materia Prima"); startMovListener(); };
+  $('filter-pt').onclick    = () => { setTypeFilter("Productos Terminados"); startMovListener(); };
+  function setTypeFilter(val){
+    currentTypeFilter = val;
+    ['filter-todos','filter-mp','filter-pt'].forEach(id => $(id).classList.remove('filter-active'));
+    if(val === 'todos') $('filter-todos').classList.add('filter-active');
+    if(val === 'Materia Prima') $('filter-mp').classList.add('filter-active');
+    if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
+  }
+
+  // LISTENER
+  function startMovListener(){
+    if (!currentUser || !currentRole) return;
+    if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
+
+    unsubscribeMov = db.collection(COL_MOV)
+      .orderBy("creadoEn","desc")
+      .onSnapshot((snap)=>{
+        const cont = $('movList');
+        cont.innerHTML = '';
+        let count = 0;
+        snap.forEach(doc=>{
+          const d = doc.data();
+
+          if (currentRole === 'fletero' && d.estado === 'Entregado') {
+            return;
+          }
+          if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) {
+            return;
+          }
+
+          count++;
+          const div = document.createElement('div');
+          div.className = 'movement';
+          const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
+
+          div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <div>
+                <strong>${d.descripcion || '(sin descripción)'} </strong>
+                <span class="badge ${estadoClass}">${d.estado}</span>
+              </div>
+              <small>${new Date(d.creadoEn).toLocaleString()}</small>
+            </div>
+            <div style="margin-top:4px">
+              <small>Encargado:</small> ${d.encargado || '—'} |
+              <small>Origen:</small> ${d.origen || '—'} →
+              <small>Destino:</small> ${d.destino || '—'}
+            </div>
+            <div style="margin-top:4px">
+              <small>Cant:</small> ${d.cantidad || 0} |
+              <small>Prioridad:</small> ${d.prioridad || '—'} |
+              <small>Tipo:</small> ${d.tipoViaje || '—'} |
+              <small>Fletero:</small> ${d.fletero || '—'}
+            </div>
+            ${d.horarioEstimado ? `<div style="margin-top:4px"><small>Horario estimado:</small> ${new Date(d.horarioEstimado).toLocaleString()}</div>` : ''}
+            ${d.obs ? `<div style="margin-top:4px"><small>Obs:</small> ${d.obs}</div>` : ''}
+            <div class="actions" id="actions-${doc.id}"></div>
+          `;
+
+          const actionsDiv = div.querySelector(`#actions-${doc.id}`);
+
+          // PREPARADO: estos dos son de preparado
+          if (currentRole === 'preparado') {
+            const btnListo = document.createElement('button');
+            btnListo.className = 'ghost';
+            btnListo.textContent = 'Listo para retirar';
+            btnListo.onclick = () => setEstadoPreparado(doc.id);
+            actionsDiv.appendChild(btnListo);
+
+            const btnHorario = document.createElement('button');
+            btnHorario.className = 'ghost';
+            btnHorario.textContent = 'Hora';
+            btnHorario.onclick = () => setHorarioEstimado(doc.id);
+            actionsDiv.appendChild(btnHorario);
+          }
+
+          // FLETERO: solo sus acciones
+          if (currentRole === 'fletero') {
+            const btnTomar = document.createElement('button');
+            btnTomar.className = 'ghost';
+            btnTomar.textContent = 'Tomar';
+            btnTomar.onclick = () => assignFletero(doc.id);
+            actionsDiv.appendChild(btnTomar);
+
+            const btnEnViaje = document.createElement('button');
+            btnEnViaje.className = 'ghost';
+            btnEnViaje.textContent = 'En viaje';
+            btnEnViaje.onclick = () => setEstado(doc.id, 'En viaje');
+            actionsDiv.appendChild(btnEnViaje);
+
+            const btnEntregado = document.createElement('button');
+            btnEntregado.className = 'ghost';
+            btnEntregado.textContent = 'Entregado';
+            btnEntregado.onclick = () => setEstado(doc.id, 'Entregado');
+            actionsDiv.appendChild(btnEntregado);
+          }
+
+          // ENCARGADO: borrar lo suyo
+          if (currentRole === 'encargado' && currentUser && d.creadoPorUid === currentUser.uid) {
+            const x = document.createElement('button');
+            x.textContent = '×';
+            x.className = 'delete-x';
+            x.onclick = () => deleteMov(doc.id);
+            div.appendChild(x);
+          }
+
+          cont.appendChild(div);
+        });
+        $('movCount').textContent = count ? `${count} movimientos` : 'No hay movimientos aún';
+      });
+  }
+
+  // ACCIONES
+  async function assignFletero(id){
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    const nombre = $('fleteroNombre') ? $('fleteroNombre').value.trim() : '';
+    const finalName = nombre || currentUser.email;
+    await db.collection(COL_MOV).doc(id).update({ fletero: finalName });
+  }
+
+  async function setEstado(id, estado){
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    const nombre = $('fleteroNombre') ? $('fleteroNombre').value.trim() : '';
+    const data = { estado: estado };
+    if(nombre) data.fletero = nombre;
+    await db.collection(COL_MOV).doc(id).update(data);
+  }
+
+  async function setEstadoPreparado(id){
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    await db.collection(COL_MOV).doc(id).update({
+      estado: "Listo para retirar"
     });
-  });
-}
+  }
 
-// eliminar movimiento (solo admin)
-async function deleteMov(id){
-  if(!ADMIN_EMAILS.includes(currentUser.email)){alert("Solo el administrador puede eliminar");return;}
-  if(confirm("¿Eliminar este movimiento?")) await db.collection("movimientos").doc(id).delete();
-}
-
-// usuarios (solo admin)
-function startUsersListener(){
-  if(unsubscribeUsers)unsubscribeUsers();
-  unsubscribeUsers=db.collection("usuarios").orderBy("email","asc").onSnapshot(snap=>{
-    const box=$('usersList');
-    let html='<table class="admin-users"><tr><th>Email</th><th>Rol</th><th>Acción</th></tr>';
-    snap.forEach(doc=>{
-      const u=doc.data();
-      html+=`<tr><td>${u.email}</td><td>${u.rol}</td>
-      <td><button class="ghost" onclick="deleteUser('${doc.id}')">Eliminar</button></td></tr>`;
+  async function setHorarioEstimado(id){
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    let hora = $('defaultHora') ? $('defaultHora').value : '';
+    if(!hora){
+      hora = prompt("Ingresá fecha y hora (formato 2025-11-06T15:30):","");
+      if(!hora) return;
+    }
+    await db.collection(COL_MOV).doc(id).update({
+      horarioEstimado: hora
     });
-    html+='</table>';box.innerHTML=html;
-  });
-}
-async function deleteUser(uid){
-  if(!ADMIN_EMAILS.includes(currentUser.email)){alert("Solo el administrador puede eliminar usuarios");return;}
-  if(confirm("¿Eliminar este usuario?")) await db.collection("usuarios").doc(uid).delete();
-}
-window.saveRole=saveRole;window.deleteUser=deleteUser;
+  }
+
+  async function deleteMov(id){
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    if(!confirm("¿Eliminar este movimiento?")) return;
+    await db.collection(COL_MOV).doc(id).delete();
+  }
+
+  window.saveRole = saveRole;
+  window.assignFletero = assignFletero;
+  window.setEstado = setEstado;
+  window.setEstadoPreparado = setEstadoPreparado;
+  window.setHorarioEstimado = setHorarioEstimado;
+  window.deleteMov = deleteMov;
 </script>
 </body>
 </html>
