@@ -479,3 +479,50 @@
 </script>
 </body>
 </html>
+const ADMIN_EMAILS = ["gerencia@sagradamadre.com"]; // único administrador
+
+// ... resto de inicialización Firebase igual ...
+
+async function deleteMov(id){
+  if(!currentUser){ alert("Iniciá sesión"); return; }
+  if(!ADMIN_EMAILS.includes(currentUser.email)){ 
+    alert("Solo el administrador puede eliminar movimientos"); 
+    return; 
+  }
+  if(!confirm("¿Eliminar este movimiento?")) return;
+  await db.collection(COL_MOV).doc(id).delete();
+}
+
+async function deleteUser(uid){
+  if(!currentUser){ alert("Iniciá sesión"); return; }
+  if(!ADMIN_EMAILS.includes(currentUser.email)){ 
+    alert("Solo el administrador puede eliminar usuarios"); 
+    return; 
+  }
+  if(!confirm("¿Eliminar este usuario del registro?")) return;
+  await db.collection(COL_USERS).doc(uid).delete();
+}
+
+// LISTA DE USUARIOS SOLO PARA ADMIN
+function startUsersListener(){
+  if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
+  unsubscribeUsers = db.collection(COL_USERS)
+    .orderBy("email","asc")
+    .onSnapshot((snap)=>{
+      const box = $('usersList');
+      let html = '<table class="admin-users"><tr><th>Email</th><th>Rol</th><th>Acción</th></tr>';
+      snap.forEach(doc=>{
+        const u = doc.data();
+        html += `
+          <tr>
+            <td>${u.email || '—'}</td>
+            <td>${u.rol || '—'}</td>
+            <td>
+              <button class="ghost" onclick="deleteUser('${doc.id}')">Eliminar</button>
+            </td>
+          </tr>`;
+      });
+      html += '</table>';
+      box.innerHTML = html;
+    });
+}
