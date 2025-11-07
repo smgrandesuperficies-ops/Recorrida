@@ -353,11 +353,16 @@
       alert("Completá al menos encargado y descripción");
       return;
     }
-    await db.collection(COL_MOV).add(mov);
-    $('descripcion').value = '';
-    $('cantidad').value = 1;
-    $('obs').value = '';
-  };
+    try {
+  await db.collection(COL_MOV).add(mov);
+  console.log("✅ Movimiento guardado correctamente en Firestore.");
+} catch (e) {
+  alert("⚠️ No se pudo guardar en Firebase: " + e.message);
+  console.error("Error de guardado:", e);
+}
+$('descripcion').value = '';
+$('cantidad').value = 1;
+$('obs').value = '';
 
   // FILTROS
   $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
@@ -622,3 +627,4 @@
 </script>
 </body>
 </html>
+
