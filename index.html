@@ -55,6 +55,10 @@
 
     body.role-preparado header{background:linear-gradient(90deg,#16a34a,#15803d);}
     body.role-fletero header{background:linear-gradient(90deg,#f97316,#ea580c);}
+    body.role-admin header{background:linear-gradient(90deg,#0f172a,#1f2937);}
+    .admin-table{width:100%;border-collapse:collapse;margin-top:6px}
+    .admin-table th,.admin-table td{border:1px solid #e2e8f0;padding:6px;font-size:13px;text-align:left}
+    .date-title{font-size:13px;font-weight:600;margin-top:10px;margin-bottom:4px;color:#0f172a}
   </style>
 </head>
 <body>
@@ -167,6 +171,13 @@
       </label>
       <small>Tomá el pedido y actualizá el estado.</small>
     </div>
+
+    <!-- ADMIN -->
+    <div class="card" id="adminBox" style="display:none">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Panel de administración</h2>
+      <small>Solo gerencia@sagradamadre.com puede ver esto.</small>
+      <div id="usersList"></div>
+    </div>
   </div>
 
   <!-- LISTA -->
@@ -187,6 +198,9 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 <script>
+  // solo este mail es admin
+  const ADMIN_EMAILS = ["gerencia@sagradamadre.com"];
+
   const firebaseConfig = {
     apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
     authDomain: "recorrida-planta.firebaseapp.com",
@@ -208,6 +222,7 @@
   let currentRole = null;
   let currentTypeFilter = "todos";
   let unsubscribeMov = null;
+  let unsubscribeUsers = null;
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -238,10 +253,20 @@
       $('app').style.display = 'none';
       $('rolePicker').style.display = 'none';
       if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
+      if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
       return;
     }
     $('loginBox').style.display = 'none';
     $('userInfo').textContent = user.email;
+
+    // si es el admin, lo forzamos a rol admin
+    if (ADMIN_EMAILS.includes(user.email)) {
+      await db.collection(COL_USERS).doc(user.uid).set({
+        email: user.email,
+        rol: 'admin',
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+    }
 
     const ref = db.collection(COL_USERS).doc(user.uid);
     const doc = await ref.get();
@@ -253,18 +278,22 @@
     currentRole = doc.data().rol;
     showAppForRole(currentRole);
     startMovListener();
+    if (currentRole === 'admin') startUsersListener();
   });
 
   async function saveRole(rol){
     if(!currentUser) return;
+    // si es admin, no dejamos que se ponga otra cosa
+    const finalRole = ADMIN_EMAILS.includes(currentUser.email) ? 'admin' : rol;
     await db.collection(COL_USERS).doc(currentUser.uid).set({
       email: currentUser.email,
-      rol: rol,
+      rol: finalRole,
       createdAt: new Date().toISOString()
     });
-    currentRole = rol;
-    showAppForRole(rol);
+    currentRole = finalRole;
+    showAppForRole(finalRole);
     startMovListener();
+    if (finalRole === 'admin') startUsersListener();
   }
   window.saveRole = saveRole;
 
@@ -277,16 +306,18 @@
     if(rol === 'encargado') document.body.classList.add('role-encargado');
     if(rol === 'preparado') document.body.classList.add('role-preparado');
     if(rol === 'fletero')   document.body.classList.add('role-fletero');
+    if(rol === 'admin')     document.body.classList.add('role-admin');
 
     $('encargadoBox').style.display = (rol === 'encargado') ? 'block' : 'none';
     $('preparadoBox').style.display = (rol === 'preparado') ? 'block' : 'none';
     $('fleteroBox').style.display   = (rol === 'fletero')   ? 'block' : 'none';
+    $('adminBox').style.display     = (rol === 'admin')     ? 'block' : 'none';
   }
 
   // CREAR MOVIMIENTO
   $('btnCreate').onclick = async () => {
-    if(currentRole !== 'encargado'){
-      alert("Solo un encargado puede crear movimientos");
+    if(currentRole !== 'encargado' && currentRole !== 'admin'){
+      alert("Solo un encargado o el admin puede crear movimientos");
       return;
     }
     const mov = {
@@ -326,7 +357,7 @@
     if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
   }
 
-  // LISTENER
+  // LISTENER MOVIMIENTOS (agrupado por fecha)
   function startMovListener(){
     if (!currentUser || !currentRole) return;
     if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
@@ -337,17 +368,31 @@
         const cont = $('movList');
         cont.innerHTML = '';
         let count = 0;
+        let lastDateLabel = null;
+
         snap.forEach(doc=>{
           const d = doc.data();
 
+          // fletero no ve entregados
           if (currentRole === 'fletero' && d.estado === 'Entregado') {
             return;
           }
+          // filtro por tipo
           if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) {
             return;
           }
 
           count++;
+          const dateStr = new Date(d.creadoEn).toLocaleDateString();
+          if (lastDateLabel !== dateStr) {
+            // nuevo grupo de fecha
+            const title = document.createElement('div');
+            title.textContent = dateStr;
+            title.className = 'date-title';
+            cont.appendChild(title);
+            lastDateLabel = dateStr;
+          }
+
           const div = document.createElement('div');
           div.className = 'movement';
           const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
@@ -358,7 +403,7 @@
                 <strong>${d.descripcion || '(sin descripción)'} </strong>
                 <span class="badge ${estadoClass}">${d.estado}</span>
               </div>
-              <small>${new Date(d.creadoEn).toLocaleString()}</small>
+              <small>${new Date(d.creadoEn).toLocaleTimeString()}</small>
             </div>
             <div style="margin-top:4px">
               <small>Encargado:</small> ${d.encargado || '—'} |
@@ -378,7 +423,7 @@
 
           const actionsDiv = div.querySelector(`#actions-${doc.id}`);
 
-          // PREPARADO: estos dos son de preparado
+          // PREPARADO
           if (currentRole === 'preparado') {
             const btnListo = document.createElement('button');
             btnListo.className = 'ghost';
@@ -393,7 +438,7 @@
             actionsDiv.appendChild(btnHorario);
           }
 
-          // FLETERO: solo sus acciones
+          // FLETERO
           if (currentRole === 'fletero') {
             const btnTomar = document.createElement('button');
             btnTomar.className = 'ghost';
@@ -414,8 +459,8 @@
             actionsDiv.appendChild(btnEntregado);
           }
 
-          // ENCARGADO: borrar lo suyo
-          if (currentRole === 'encargado' && currentUser && d.creadoPorUid === currentUser.uid) {
+          // ADMIN: puede borrar todo
+          if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
             const x = document.createElement('button');
             x.textContent = '×';
             x.className = 'delete-x';
@@ -429,7 +474,7 @@
       });
   }
 
-  // ACCIONES
+  // ACCIONES MOVIMIENTOS
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const nombre = $('fleteroNombre') ? $('fleteroNombre').value.trim() : '';
@@ -456,7 +501,7 @@
     if(!currentUser){ alert("Iniciá sesión"); return; }
     let hora = $('defaultHora') ? $('defaultHora').value : '';
     if(!hora){
-      hora = prompt("Ingresá fecha y hora (formato 2025-11-06T15:30):","");
+      hora = prompt("Ingresá fecha y hora (formato 2025-11-06T15:30):",""); 
       if(!hora) return;
     }
     await db.collection(COL_MOV).doc(id).update({
@@ -464,18 +509,57 @@
     });
   }
 
+  // ELIMINAR MOVIMIENTO (SOLO ADMIN)
   async function deleteMov(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
+    if(!ADMIN_EMAILS.includes(currentUser.email)){
+      alert("Solo el administrador puede eliminar movimientos");
+      return;
+    }
     if(!confirm("¿Eliminar este movimiento?")) return;
     await db.collection(COL_MOV).doc(id).delete();
   }
 
-  window.saveRole = saveRole;
+  // LISTA DE USUARIOS (SOLO ADMIN)
+  function startUsersListener(){
+    if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
+    unsubscribeUsers = db.collection(COL_USERS)
+      .orderBy("email","asc")
+      .onSnapshot((snap)=>{
+        const box = $('usersList');
+        let html = '<table class="admin-table"><tr><th>Email</th><th>Rol</th><th>Acción</th></tr>';
+        snap.forEach(doc=>{
+          const u = doc.data();
+          html += `
+            <tr>
+              <td>${u.email || '—'}</td>
+              <td>${u.rol || '—'}</td>
+              <td><button class="ghost" onclick="deleteUser('${doc.id}')">Eliminar</button></td>
+            </tr>
+          `;
+        });
+        html += '</table>';
+        box.innerHTML = html;
+      });
+  }
+
+  async function deleteUser(uid){
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    if(!ADMIN_EMAILS.includes(currentUser.email)){
+      alert("Solo el administrador puede eliminar usuarios");
+      return;
+    }
+    if(!confirm("¿Eliminar este usuario del registro?")) return;
+    await db.collection(COL_USERS).doc(uid).delete();
+  }
+
+  // exponer algunas funciones
   window.assignFletero = assignFletero;
   window.setEstado = setEstado;
   window.setEstadoPreparado = setEstadoPreparado;
   window.setHorarioEstimado = setHorarioEstimado;
   window.deleteMov = deleteMov;
+  window.deleteUser = deleteUser;
 </script>
 </body>
 </html>
