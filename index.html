@@ -353,7 +353,7 @@
       alert("Completá al menos encargado y descripción");
       return;
     }
-    try {
+try {
   await db.collection(COL_MOV).add(mov);
   console.log("✅ Movimiento guardado correctamente en Firestore.");
 } catch (e) {
@@ -627,4 +627,5 @@ $('obs').value = '';
 </script>
 </body>
 </html>
+
 
