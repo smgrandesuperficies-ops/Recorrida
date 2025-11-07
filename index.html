@@ -60,6 +60,9 @@
     .admin-table{width:100%;border-collapse:collapse;margin-top:6px}
     .admin-table th,.admin-table td{border:1px solid #e2e8f0;padding:6px;font-size:13px;text-align:left}
     .date-title{font-size:13px;font-weight:600;margin-top:10px;margin-bottom:4px;color:#0f172a}
+    .admin-mov-list{max-height:260px;overflow-y:auto;margin-top:6px;border:1px solid #e2e8f0;border-radius:8px;padding:6px}
+    .admin-mov-item{font-size:12px;border-bottom:1px solid #eef2f6;padding:4px 0}
+    .admin-mov-item:last-child{border-bottom:0}
   </style>
 </head>
 <body>
@@ -178,6 +181,9 @@
       <h2 style="margin:0 0 6px 0;font-size:15px">Panel de administración</h2>
       <small>Solo gerencia@sagradamadre.com puede ver esto.</small>
       <div id="usersList"></div>
+      <h3 style="margin-top:14px;font-size:13px">Registro completo de movimientos</h3>
+      <small>Histórico (no se borra)</small>
+      <div id="adminMovList" class="admin-mov-list"></div>
     </div>
   </div>
 
@@ -224,6 +230,7 @@
   let currentTypeFilter = "todos";
   let unsubscribeMov = null;
   let unsubscribeUsers = null;
+  let unsubscribeAdminMov = null;
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -255,6 +262,7 @@
       $('rolePicker').style.display = 'none';
       if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
       if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
+      if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
       return;
     }
     $('loginBox').style.display = 'none';
@@ -281,7 +289,7 @@
     startMovListener();
     if (currentRole === 'admin') {
       startUsersListener();
-      cleanupOldMovements();
+      startAdminMovListener();
     }
   });
 
@@ -298,7 +306,7 @@
     startMovListener();
     if (finalRole === 'admin') {
       startUsersListener();
-      cleanupOldMovements();
+      startAdminMovListener();
     }
   }
   window.saveRole = saveRole;
@@ -370,13 +378,10 @@
     return currentUser ? currentUser.email : '';
   }
 
-  // LISTENER MOVIMIENTOS (agrupado por fecha, 7 días, filtrado por rol)
+  // LISTENER MOVIMIENTOS (vista normal según rol)
   function startMovListener(){
     if (!currentUser || !currentRole) return;
     if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
-
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7*24*60*60*1000);
 
     unsubscribeMov = db.collection(COL_MOV)
       .orderBy("creadoEn","desc")
@@ -389,11 +394,6 @@
         snap.forEach(doc=>{
           const d = doc.data();
           const created = new Date(d.creadoEn);
-
-          // encargado y admin ven solo últimos 7 días
-          if ((currentRole === 'encargado' || currentRole === 'admin') && created < sevenDaysAgo) {
-            return;
-          }
 
           // preparado no ve entregados
           if (currentRole === 'preparado' && d.estado === 'Entregado') {
@@ -465,7 +465,7 @@
             actionsDiv.appendChild(btnHorario);
           }
 
-          // FLETERO (con restricción: solo el asignado puede pasar estados)
+          // FLETERO (con restricción)
           if (currentRole === 'fletero') {
             const btnTomar = document.createElement('button');
             btnTomar.className = 'ghost';
@@ -501,6 +501,29 @@
       });
   }
 
+  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS (sin filtros)
+  function startAdminMovListener(){
+    if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
+    const box = $('adminMovList');
+    unsubscribeAdminMov = db.collection(COL_MOV)
+      .orderBy("creadoEn","desc")
+      .onSnapshot(snap=>{
+        box.innerHTML = '';
+        snap.forEach(doc=>{
+          const d = doc.data();
+          const div = document.createElement('div');
+          div.className = 'admin-mov-item';
+          div.innerHTML = `
+            <strong>${d.descripcion || '(sin desc)'}</strong> —
+            ${d.estado} —
+            <small>${new Date(d.creadoEn).toLocaleString()}</small><br>
+            <small>Enc: ${d.encargado || '—'} | Tipo: ${d.tipoViaje || '—'} | Fletero: ${d.fletero || '—'}</small>
+          `;
+          box.appendChild(div);
+        });
+      });
+  }
+
   // ACCIONES MOVIMIENTOS
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
@@ -508,7 +531,6 @@
     await db.collection(COL_MOV).doc(id).update({ fletero: finalName });
   }
 
-  // fletero cambia estado solo si es el asignado
   async function setEstadoFletero(id, movData, nuevoEstado){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const myName = getCurrentFleteroName();
@@ -590,24 +612,6 @@
     await db.collection(COL_USERS).doc(uid).delete();
   }
 
-  // limpiar movimientos de más de 7 días (cuando entra el admin)
-  async function cleanupOldMovements(){
-    const now = new Date();
-    const limit = new Date(now.getTime() - 7*24*60*60*1000);
-    const snap = await db.collection(COL_MOV).get();
-    const batch = db.batch();
-    snap.forEach(doc=>{
-      const d = doc.data();
-      if (d.creadoEn) {
-        const created = new Date(d.creadoEn);
-        if (created < limit) {
-          batch.delete(doc.ref);
-        }
-      }
-    });
-    await batch.commit();
-  }
-
   // exponer
   window.assignFletero = assignFletero;
   window.setEstadoFletero = setEstadoFletero;
@@ -618,4 +622,3 @@
 </script>
 </body>
 </html>
-
