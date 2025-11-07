@@ -63,6 +63,13 @@
     .admin-mov-list{max-height:260px;overflow-y:auto;margin-top:6px;border:1px solid #e2e8f0;border-radius:8px;padding:6px}
     .admin-mov-item{font-size:12px;border-bottom:1px solid #eef2f6;padding:4px 0}
     .admin-mov-item:last-child{border-bottom:0}
+
+    /* picker de color fletero */
+    #fleteroColorBox{margin-top:10px;display:none}
+    .color-pill{
+      width:28px;height:28px;border-radius:999px;border:2px solid transparent;cursor:pointer;display:inline-block;margin-right:6px;
+    }
+    .color-pill.selected{border-color:#0f172a}
   </style>
 </head>
 <body>
@@ -91,7 +98,11 @@
   <div class="row">
     <div class="col"><button onclick="saveRole('encargado')">Soy ENCARGADO</button></div>
     <div class="col"><button onclick="saveRole('preparado')">Soy PREPARADO</button></div>
-    <div class="col"><button onclick="saveRole('fletero')">Soy FLETERO</button></div>
+    <div class="col"><button onclick="chooseFletero()">Soy FLETERO</button></div>
+  </div>
+  <div id="fleteroColorBox">
+    <small>Elegí tu color (solo una vez):</small>
+    <div id="fleteroColorOptions"></div>
   </div>
   <small>Esto se guarda una sola vez.</small>
 </div>
@@ -205,7 +216,6 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 <script>
-  // solo este mail es admin
   const ADMIN_EMAILS = ["gerencia@sagradamadre.com"];
 
   const firebaseConfig = {
@@ -225,7 +235,12 @@
   const COL_MOV = "movimientos";
   const COL_USERS = "usuarios";
 
+  // paleta fija para fleteros
+  const FLETERO_COLORS = ["#f97316","#0ea5e9","#22c55e","#a855f7","#f43f5e","#eab308"];
+  let selectedFleteroColor = null;
+
   let currentUser = null;
+  let currentUserData = null; // acá guardamos su doc de usuarios (rol, color, etc)
   let currentRole = null;
   let currentTypeFilter = "todos";
   let unsubscribeMov = null;
@@ -255,6 +270,7 @@
   // SESIÓN
   auth.onAuthStateChanged(async (user)=>{
     currentUser = user;
+    currentUserData = null;
     if(!user){
       document.body.className = '';
       $('loginBox').style.display = 'block';
@@ -268,7 +284,7 @@
     $('loginBox').style.display = 'none';
     $('userInfo').textContent = user.email;
 
-    // si es el admin, lo forzamos a rol admin
+    // si es admin, lo forzamos
     if (ADMIN_EMAILS.includes(user.email)) {
       await db.collection(COL_USERS).doc(user.uid).set({
         email: user.email,
@@ -280,11 +296,13 @@
     const ref = db.collection(COL_USERS).doc(user.uid);
     const doc = await ref.get();
     if(!doc.exists){
+      buildFleteroColorPicker();
       $('rolePicker').style.display = 'block';
       $('app').style.display = 'none';
       return;
     }
-    currentRole = doc.data().rol;
+    currentUserData = doc.data();
+    currentRole = currentUserData.rol;
     showAppForRole(currentRole);
     startMovListener();
     if (currentRole === 'admin') {
@@ -293,23 +311,81 @@
     }
   });
 
+  // construir picker de colores fletero
+  function buildFleteroColorPicker(){
+    const box = $('fleteroColorOptions');
+    box.innerHTML = '';
+    FLETERO_COLORS.forEach(col=>{
+      const div = document.createElement('div');
+      div.className = 'color-pill';
+      div.style.background = col;
+      div.onclick = ()=> {
+        selectedFleteroColor = col;
+        document.querySelectorAll('.color-pill').forEach(p=>p.classList.remove('selected'));
+        div.classList.add('selected');
+      };
+      box.appendChild(div);
+    });
+  }
+
+  function chooseFletero(){
+    $('fleteroColorBox').style.display = 'block';
+  }
+
   async function saveRole(rol){
     if(!currentUser) return;
-    const finalRole = ADMIN_EMAILS.includes(currentUser.email) ? 'admin' : rol;
-    await db.collection(COL_USERS).doc(currentUser.uid).set({
-      email: currentUser.email,
-      rol: finalRole,
-      createdAt: new Date().toISOString()
-    });
-    currentRole = finalRole;
-    showAppForRole(finalRole);
-    startMovListener();
-    if (finalRole === 'admin') {
+
+    // si es admin, se queda admin
+    if (ADMIN_EMAILS.includes(currentUser.email)) {
+      await db.collection(COL_USERS).doc(currentUser.uid).set({
+        email: currentUser.email,
+        rol: 'admin',
+        createdAt: new Date().toISOString()
+      });
+      currentRole = 'admin';
+      currentUserData = { email: currentUser.email, rol: 'admin' };
+      showAppForRole('admin');
+      startMovListener();
       startUsersListener();
       startAdminMovListener();
+      return;
     }
+
+    // si eligió fletero, debe elegir color y debe ser único
+    if (rol === 'fletero') {
+      if (!selectedFleteroColor) {
+        alert("Elegí un color para tu usuario de fletero.");
+        return;
+      }
+      const taken = await db.collection(COL_USERS).where('color','==',selectedFleteroColor).get();
+      if (!taken.empty) {
+        alert("Ese color ya lo usa otro fletero. Elegí otro.");
+        return;
+      }
+      await db.collection(COL_USERS).doc(currentUser.uid).set({
+        email: currentUser.email,
+        rol: 'fletero',
+        color: selectedFleteroColor,
+        createdAt: new Date().toISOString()
+      });
+      currentRole = 'fletero';
+      currentUserData = { email: currentUser.email, rol: 'fletero', color: selectedFleteroColor };
+    } else {
+      // encargado o preparado normales
+      await db.collection(COL_USERS).doc(currentUser.uid).set({
+        email: currentUser.email,
+        rol: rol,
+        createdAt: new Date().toISOString()
+      });
+      currentRole = rol;
+      currentUserData = { email: currentUser.email, rol: rol };
+    }
+
+    showAppForRole(currentRole);
+    startMovListener();
   }
   window.saveRole = saveRole;
+  window.chooseFletero = chooseFletero;
 
   function showAppForRole(rol){
     $('rolePicker').style.display = 'none';
@@ -346,6 +422,7 @@
       obs: $('obs').value.trim(),
       estado: "Pendiente",
       fletero: null,
+      fleteroUid: null,
       horarioEstimado: null,
       creadoPorUid: currentUser ? currentUser.uid : null
     };
@@ -355,15 +432,13 @@
     }
     try {
       await db.collection(COL_MOV).add(mov);
-      console.log("✅ Movimiento guardado correctamente en Firestore.");
     } catch (e) {
-      alert("⚠️ No se pudo guardar en Firebase: " + e.message);
-      console.error("Error de guardado:", e);
+      alert("No se pudo guardar en Firebase: " + e.message);
     }
     $('descripcion').value = '';
     $('cantidad').value = 1;
     $('obs').value = '';
-  };   // 👈 este era el que faltaba
+  };
 
   // FILTROS
   $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
@@ -377,14 +452,14 @@
     if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
   }
 
-  // nombre del fletero actual (para comparar)
+  // nombre del fletero actual (para mostrar)
   function getCurrentFleteroName() {
     const inp = $('fleteroNombre');
     if (inp && inp.value.trim()) return inp.value.trim();
     return currentUser ? currentUser.email : '';
   }
 
-  // LISTENER MOVIMIENTOS (vista normal según rol)
+  // LISTENER MOVIMIENTOS
   function startMovListener(){
     if (!currentUser || !currentRole) return;
     if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
@@ -401,18 +476,10 @@
           const d = doc.data();
           const created = new Date(d.creadoEn);
 
-          // preparado no ve entregados
-          if (currentRole === 'preparado' && d.estado === 'Entregado') {
-            return;
-          }
-          // fletero no ve entregados
-          if (currentRole === 'fletero' && d.estado === 'Entregado') {
-            return;
-          }
-          // filtro por tipo
-          if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) {
-            return;
-          }
+          // preparado y fletero no ven entregados
+          if ((currentRole === 'preparado' || currentRole === 'fletero') && d.estado === 'Entregado') return;
+
+          if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) return;
 
           count++;
           const dateStr = created.toLocaleDateString();
@@ -427,6 +494,12 @@
           const div = document.createElement('div');
           div.className = 'movement';
           const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
+
+          // si este movimiento lo tomó este fletero y tiene color -> lo pintamos
+          if (currentRole === 'fletero' && currentUser && d.fleteroUid === currentUser.uid && currentUserData && currentUserData.color) {
+            div.style.background = currentUserData.color + '22'; // un poco transparente
+            div.style.borderColor = currentUserData.color;
+          }
 
           div.innerHTML = `
             <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
@@ -469,7 +542,7 @@
             actionsDiv.appendChild(btnHorario);
           }
 
-          // FLETERO (con restricción)
+          // FLETERO (con restricción por UID)
           if (currentRole === 'fletero') {
             const btnTomar = document.createElement('button');
             btnTomar.className = 'ghost';
@@ -490,7 +563,7 @@
             actionsDiv.appendChild(btnEntregado);
           }
 
-          // ADMIN: puede borrar todo
+          // ADMIN: puede borrar
           if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
             const x = document.createElement('button');
             x.textContent = '×';
@@ -505,7 +578,7 @@
       });
   }
 
-  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS (sin filtros)
+  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS
   function startAdminMovListener(){
     if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
     const box = $('adminMovList');
@@ -518,8 +591,7 @@
           const div = document.createElement('div');
           div.className = 'admin-mov-item';
           div.innerHTML = `
-            <strong>${d.descripcion || '(sin desc)'}</strong> —
-            ${d.estado} —
+            <strong>${d.descripcion || '(sin desc)'}</strong> — ${d.estado} —
             <small>${new Date(d.creadoEn).toLocaleString()}</small><br>
             <small>Enc: ${d.encargado || '—'} | Tipo: ${d.tipoViaje || '—'} | Fletero: ${d.fletero || '—'}</small>
           `;
@@ -532,24 +604,27 @@
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const finalName = getCurrentFleteroName();
-    await db.collection(COL_MOV).doc(id).update({ fletero: finalName });
+    await db.collection(COL_MOV).doc(id).update({
+      fletero: finalName,
+      fleteroUid: currentUser.uid
+    });
   }
 
   async function setEstadoFletero(id, movData, nuevoEstado){
     if(!currentUser){ alert("Iniciá sesión"); return; }
-    const myName = getCurrentFleteroName();
-    const assigned = movData.fletero || '';
-    if (!assigned) {
+    if (!movData.fleteroUid) {
       alert("Primero tomá el movimiento.");
       return;
     }
-    if (assigned !== myName) {
-      alert("Este movimiento lo tiene otro fletero.");
+    if (movData.fleteroUid !== currentUser.uid) {
+      alert("Ese movimiento lo tiene otro fletero.");
       return;
     }
+    const myName = getCurrentFleteroName();
     await db.collection(COL_MOV).doc(id).update({
       estado: nuevoEstado,
-      fletero: myName
+      fletero: myName,
+      fleteroUid: currentUser.uid
     });
   }
 
@@ -590,13 +665,14 @@
       .orderBy("email","asc")
       .onSnapshot((snap)=>{
         const box = $('usersList');
-        let html = '<table class="admin-table"><tr><th>Email</th><th>Rol</th><th>Acción</th></tr>';
+        let html = '<table class="admin-table"><tr><th>Email</th><th>Rol</th><th>Color</th><th>Acción</th></tr>';
         snap.forEach(doc=>{
           const u = doc.data();
           html += `
             <tr>
               <td>${u.email || '—'}</td>
               <td>${u.rol || '—'}</td>
+              <td>${u.color || '—'}</td>
               <td><button class="ghost" onclick="deleteUser('${doc.id}')">Eliminar</button></td>
             </tr>
           `;
@@ -617,11 +693,6 @@
   }
 
   // exponer
-  window.assignFletero = assignFletero;
-  window.setEstadoFletero = setEstadoFletero;
-  window.setEstadoPreparado = setEstadoPreparado;
-  window.setHorarioEstimado = setHorarioEstimado;
-  window.deleteMov = deleteMov;
   window.deleteUser = deleteUser;
 </script>
 </body>
