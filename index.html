@@ -353,16 +353,17 @@
       alert("Completá al menos encargado y descripción");
       return;
     }
-try {
-  await db.collection(COL_MOV).add(mov);
-  console.log("✅ Movimiento guardado correctamente en Firestore.");
-} catch (e) {
-  alert("⚠️ No se pudo guardar en Firebase: " + e.message);
-  console.error("Error de guardado:", e);
-}
-$('descripcion').value = '';
-$('cantidad').value = 1;
-$('obs').value = '';
+    try {
+      await db.collection(COL_MOV).add(mov);
+      console.log("✅ Movimiento guardado correctamente en Firestore.");
+    } catch (e) {
+      alert("⚠️ No se pudo guardar en Firebase: " + e.message);
+      console.error("Error de guardado:", e);
+    }
+    $('descripcion').value = '';
+    $('cantidad').value = 1;
+    $('obs').value = '';
+  };   // 👈 este era el que faltaba
 
   // FILTROS
   $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
@@ -404,12 +405,10 @@ $('obs').value = '';
           if (currentRole === 'preparado' && d.estado === 'Entregado') {
             return;
           }
-
           // fletero no ve entregados
           if (currentRole === 'fletero' && d.estado === 'Entregado') {
             return;
           }
-
           // filtro por tipo
           if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) {
             return;
@@ -627,5 +626,3 @@ $('obs').value = '';
 </script>
 </body>
 </html>
-
-
