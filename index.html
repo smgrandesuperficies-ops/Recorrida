@@ -53,10 +53,12 @@
     body.role-encargado { --primary:#0f766e; --bg:#e0f2f1; }
     body.role-preparado { --primary:#16a34a; --bg:#e8f6ec; }
     body.role-fletero   { --primary:#f97316; --bg:#fff1e8; }
+    body.role-logistica { --primary:#6366f1; --bg:#e0e7ff; }
     body.role-admin     { --primary:#0f172a; --bg:#e5e7eb; }
 
     body.role-preparado header{background:linear-gradient(90deg,#16a34a,#15803d);}
     body.role-fletero header{background:linear-gradient(90deg,#f97316,#ea580c);}
+    body.role-logistica header{background:linear-gradient(90deg,#6366f1,#4f46e5);}
     body.role-admin header{background:linear-gradient(90deg,#0f172a,#1f2937);}
 
     .admin-table{width:100%;border-collapse:collapse;margin-top:6px}
@@ -72,19 +74,24 @@
       width:28px;height:28px;border-radius:999px;border:2px solid transparent;cursor:pointer;display:inline-block;margin-right:6px;
     }
     .color-pill.selected{border-color:#0f172a}
+
+    /* lista de recorridas logística */
+    .logistica-list{margin-top:8px}
+    .logistica-date{font-weight:600;margin-top:8px}
+    .logistica-item{background:white;border:1px solid #e2e8f0;border-radius:6px;padding:6px;margin-top:4px;font-size:13px}
   </style>
 </head>
 <body>
 <header>
   <h1>Movimientos de Planta — Sistema interno</h1>
 </header>
-<!-- GIF CAMIÓN -->
+<!-- GIF -->
 <div id="loginGifContainer"
      style="display:flex;justify-content:center;align-items:center;width:100%;margin-top:35px;margin-bottom:10px;">
   <img src="20-PM-unscreen.gif" alt="Camión animado" 
        style="width:280px;max-width:90%;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1));">
 </div>
-  
+
 <!-- LOGIN -->
 <div class="card" id="loginBox">
   <h2 style="margin-top:0;font-size:15px">Ingresar</h2>
@@ -96,10 +103,10 @@
   </label>
   <button id="btnLogin">Ingresar</button>
   <button id="btnRegister" class="ghost">Crear cuenta</button>
-  <small style="display:block;margin-top:6px">Encargados, Preparado y Fleteros se loguean acá.</small>
+  <small style="display:block;margin-top:6px">Encargados, Preparado, Fleteros, Logística y Admin se loguean acá.</small>
 </div>
 
-<!-- ELEGIR ROL / FLETERO COLOR -->
+<!-- ELEGIR ROL -->
 <div class="card" id="rolePicker">
   <h2 style="margin-top:0;font-size:15px">Seleccioná tu rol</h2>
   <p style="margin:0 0 6px 0">No encontramos tu rol en el sistema. Elegí uno:</p>
@@ -107,8 +114,10 @@
     <div class="col"><button onclick="saveRole('encargado')">Soy ENCARGADO</button></div>
     <div class="col"><button onclick="saveRole('preparado')">Soy PREPARADO</button></div>
     <div class="col"><button onclick="chooseFletero()">Soy FLETERO</button></div>
+    <div class="col"><button onclick="saveRole('logistica')">Soy LOGÍSTICA</button></div>
   </div>
 
+  <!-- Color fletero -->
   <div id="fleteroColorBox" style="display:none;margin-top:10px">
     <small>Elegí tu color (solo una vez):</small>
     <div id="fleteroColorOptions" style="margin-top:6px"></div>
@@ -196,6 +205,27 @@
       <small>Tomá el pedido y actualizá el estado.</small>
     </div>
 
+    <!-- LOGÍSTICA -->
+    <div class="card" id="logisticaBox" style="display:none">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Panel de logística</h2>
+      <small>Acá cargás las direcciones y queda registro por fecha.</small>
+      <label>Vehículo / Chofer
+        <input id="logChofer" type="text" placeholder="Camión 2 - Pablo" />
+      </label>
+      <label>Origen / Salida
+        <input id="logOrigen" type="text" placeholder="Planta Sagrada Madre, ..."/>
+      </label>
+      <label>Direcciones a entregar (una por línea)
+        <textarea id="logDirecciones" rows="4" placeholder="Cliente 1 - Calle ...
+Cliente 2 - Calle ...
+Cliente 3 - Calle ..."></textarea>
+      </label>
+      <button id="btnLogGuardar">Guardar recorrida</button>
+
+      <h3 style="margin-top:10px;font-size:13px">Recorridas registradas</h3>
+      <div id="logisticaList" class="logistica-list"></div>
+    </div>
+
     <!-- ADMIN -->
     <div class="card" id="adminBox" style="display:none">
       <h2 style="margin:0 0 6px 0;font-size:15px">Panel de administración</h2>
@@ -205,30 +235,9 @@
       <small>Histórico (no se borra)</small>
       <div id="adminMovList" class="admin-mov-list"></div>
     </div>
-
-    <!-- LOGÍSTICA -->
-    <div class="card" id="logisticaBox" style="display:none">
-      <h2 style="margin:0 0 6px 0;font-size:15px">Panel de logística</h2>
-      <small>Pegá las direcciones y las ordeno en un recorrido lógico.</small>
-
-      <label>Origen del recorrido
-        <input id="logOrigen" type="text" placeholder="Ej: Planta Morón" />
-      </label>
-
-      <label>Direcciones a entregar (una por línea)
-        <textarea id="logDir" rows="6" placeholder="Ej:
-Italia 1234, Morón
-Av. Rivadavia 8000, CABA
-Sarmiento 550, Ituzaingó"></textarea>
-      </label>
-
-      <button class="ghost" onclick="logisticaOrdenarNN()">Ordenar entregas</button>
-
-      <div id="logisticaResultado" style="margin-top:10px"></div>
-    </div>
   </div>
 
-  <!-- LISTA -->
+  <!-- LISTA MOVIMIENTOS -->
   <div class="card" style="margin-top:12px">
     <h2 style="margin:0 0 6px 0;font-size:15px">Movimientos registrados</h2>
     <div class="filter-bar">
@@ -264,6 +273,7 @@ Sarmiento 550, Ituzaingó"></textarea>
   const $ = id => document.getElementById(id);
   const COL_MOV = "movimientos";
   const COL_USERS = "usuarios";
+  const COL_LOG = "recorridas_logistica";
 
   const FLETERO_COLORS = ["#f97316","#0ea5e9","#22c55e","#a855f7","#f43f5e","#eab308"];
   let selectedFleteroColor = null;
@@ -275,6 +285,7 @@ Sarmiento 550, Ituzaingó"></textarea>
   let unsubscribeMov = null;
   let unsubscribeUsers = null;
   let unsubscribeAdminMov = null;
+  let unsubscribeLogistica = null;
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -308,12 +319,13 @@ Sarmiento 550, Ituzaingó"></textarea>
       if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
       if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
       if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
+      if (unsubscribeLogistica) { unsubscribeLogistica(); unsubscribeLogistica = null; }
       return;
     }
     $('loginBox').style.display = 'none';
     $('userInfo').textContent = user.email;
 
-    // admin fijo
+    // forzar admin
     if (ADMIN_EMAILS.includes(user.email)) {
       await db.collection(COL_USERS).doc(user.uid).set({
         email: user.email,
@@ -336,10 +348,14 @@ Sarmiento 550, Ituzaingó"></textarea>
     if (currentRole === 'admin') {
       startUsersListener();
       startAdminMovListener();
+      startLogisticaListener();
+    }
+    if (currentRole === 'logistica') {
+      startLogisticaListener();
     }
   });
 
-  // picker de colores para fletero
+  // elegir fletero
   function buildFleteroColorPicker(){
     const box = $('fleteroColorOptions');
     box.innerHTML = '';
@@ -356,12 +372,10 @@ Sarmiento 550, Ituzaingó"></textarea>
       box.appendChild(div);
     });
   }
-
   function chooseFletero(){
     $('fleteroColorBox').style.display = 'block';
     buildFleteroColorPicker();
   }
-
   async function confirmFletero(){
     if (!selectedFleteroColor){
       alert("Elegí un color primero.");
@@ -374,7 +388,7 @@ Sarmiento 550, Ituzaingó"></textarea>
   async function saveRole(rol){
     if(!currentUser) return;
 
-    // si es admin, lo forzamos
+    // admin fijo
     if (ADMIN_EMAILS.includes(currentUser.email)) {
       await db.collection(COL_USERS).doc(currentUser.uid).set({
         email: currentUser.email,
@@ -387,10 +401,10 @@ Sarmiento 550, Ituzaingó"></textarea>
       startMovListener();
       startUsersListener();
       startAdminMovListener();
+      startLogisticaListener();
       return;
     }
 
-    // fletero: con color único
     if (rol === 'fletero') {
       if (!selectedFleteroColor) {
         alert("Elegí un color para tu usuario de fletero.");
@@ -410,7 +424,7 @@ Sarmiento 550, Ituzaingó"></textarea>
       currentRole = 'fletero';
       currentUserData = { email: currentUser.email, rol: 'fletero', color: selectedFleteroColor };
     } else {
-      // encargado o preparado
+      // encargado / preparado / logistica
       await db.collection(COL_USERS).doc(currentUser.uid).set({
         email: currentUser.email,
         rol: rol,
@@ -422,9 +436,11 @@ Sarmiento 550, Ituzaingó"></textarea>
 
     showAppForRole(currentRole);
     startMovListener();
+    if (currentRole === 'logistica') {
+      startLogisticaListener();
+    }
   }
 
-  // mostrar app según rol
   function showAppForRole(rol){
     $('rolePicker').style.display = 'none';
     $('app').style.display = 'block';
@@ -434,17 +450,17 @@ Sarmiento 550, Ituzaingó"></textarea>
     if(rol === 'encargado') document.body.classList.add('role-encargado');
     if(rol === 'preparado') document.body.classList.add('role-preparado');
     if(rol === 'fletero')   document.body.classList.add('role-fletero');
+    if(rol === 'logistica') document.body.classList.add('role-logistica');
     if(rol === 'admin')     document.body.classList.add('role-admin');
 
     $('encargadoBox').style.display = (rol === 'encargado' || rol === 'admin') ? 'block' : 'none';
     $('preparadoBox').style.display = (rol === 'preparado') ? 'block' : 'none';
     $('fleteroBox').style.display   = (rol === 'fletero')   ? 'block' : 'none';
+    $('logisticaBox').style.display = (rol === 'logistica' || rol === 'admin') ? 'block' : 'none';
     $('adminBox').style.display     = (rol === 'admin')     ? 'block' : 'none';
-    // mostrar logística solo a admin y encargado
-    $('logisticaBox').style.display = (rol === 'admin' || rol === 'encargado') ? 'block' : 'none';
   }
 
-  // CREAR MOVIMIENTO (sin cantidad)
+  // CREAR MOVIMIENTO
   $('btnCreate').onclick = async () => {
     if(currentRole !== 'encargado' && currentRole !== 'admin'){
       alert("Solo un encargado o el admin puede crear movimientos");
@@ -478,7 +494,30 @@ Sarmiento 550, Ituzaingó"></textarea>
     $('obs').value = '';
   };
 
-  // FILTROS
+  // LOGISTICA: guardar recorrida
+  $('btnLogGuardar').onclick = async () => {
+    if(currentRole !== 'logistica' && currentRole !== 'admin'){
+      alert("Solo logística o admin");
+      return;
+    }
+    const chofer = $('logChofer').value.trim() || (currentUser ? currentUser.email : '');
+    const origen = $('logOrigen').value.trim();
+    const direcciones = $('logDirecciones').value.trim();
+    if(!origen || !direcciones){
+      alert("Completá origen y direcciones");
+      return;
+    }
+    const lines = direcciones.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    await db.collection(COL_LOG).add({
+      creadoEn: new Date().toISOString(),
+      chofer: chofer,
+      origen: origen,
+      direcciones: lines
+    });
+    $('logDirecciones').value = '';
+  };
+
+  // FILTROS MOVIMIENTOS
   $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
   $('filter-mp').onclick    = () => { setTypeFilter("Materia Prima"); startMovListener(); };
   $('filter-pt').onclick    = () => { setTypeFilter("Productos Terminados"); startMovListener(); };
@@ -490,7 +529,6 @@ Sarmiento 550, Ituzaingó"></textarea>
     if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
   }
 
-  // nombre fletero
   function getCurrentFleteroName() {
     const inp = $('fleteroNombre');
     if (inp && inp.value.trim()) return inp.value.trim();
@@ -514,7 +552,6 @@ Sarmiento 550, Ituzaingó"></textarea>
           const d = doc.data();
           const created = new Date(d.creadoEn);
 
-          // preparado y fletero no ven entregados
           if ((currentRole === 'preparado' || currentRole === 'fletero') && d.estado === 'Entregado') return;
           if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) return;
 
@@ -532,13 +569,11 @@ Sarmiento 550, Ituzaingó"></textarea>
           div.className = 'movement';
           const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
 
-          // pintado por fletero dueño
           if (currentRole === 'fletero' && currentUser && d.fleteroUid === currentUser.uid && currentUserData && currentUserData.color) {
             div.style.background = currentUserData.color + '22';
             div.style.borderColor = currentUserData.color;
           }
 
-          // descripción como lista
           const descLines = (d.descripcion || '').split(/\r?\n/).filter(l => l.trim() !== '');
           const descHTML = descLines.length
             ? descLines.map(l => `<div>► ${l}</div>`).join('')
@@ -569,7 +604,6 @@ Sarmiento 550, Ituzaingó"></textarea>
 
           const actionsDiv = div.querySelector(`#actions-${doc.id}`);
 
-          // PREPARADO
           if (currentRole === 'preparado') {
             const btnListo = document.createElement('button');
             btnListo.className = 'ghost';
@@ -591,7 +625,6 @@ Sarmiento 550, Ituzaingó"></textarea>
             actionsDiv.appendChild(btnFaltante);
           }
 
-          // FLETERO
           if (currentRole === 'fletero') {
             const btnTomar = document.createElement('button');
             btnTomar.className = 'ghost';
@@ -612,7 +645,6 @@ Sarmiento 550, Ituzaingó"></textarea>
             actionsDiv.appendChild(btnEntregado);
           }
 
-          // ADMIN
           if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
             const x = document.createElement('button');
             x.textContent = '×';
@@ -627,7 +659,37 @@ Sarmiento 550, Ituzaingó"></textarea>
       });
   }
 
-  // ADMIN: lista completa
+  // LOGISTICA LISTENER
+  function startLogisticaListener(){
+    if (unsubscribeLogistica) { unsubscribeLogistica(); unsubscribeLogistica = null; }
+    const box = $('logisticaList');
+    unsubscribeLogistica = db.collection(COL_LOG)
+      .orderBy("creadoEn","desc")
+      .onSnapshot(snap=>{
+        box.innerHTML = '';
+        let lastDate = null;
+        snap.forEach(doc=>{
+          const d = doc.data();
+          const fecha = new Date(d.creadoEn).toLocaleDateString();
+          if (lastDate !== fecha){
+            const t = document.createElement('div');
+            t.textContent = fecha;
+            t.className = 'logistica-date';
+            box.appendChild(t);
+            lastDate = fecha;
+          }
+          const item = document.createElement('div');
+          item.className = 'logistica-item';
+          item.innerHTML = `
+            <strong>${d.chofer || '—'}</strong> – Origen: ${d.origen}<br>
+            ${d.direcciones.map(x => '• ' + x).join('<br>')}
+          `;
+          box.appendChild(item);
+        });
+      });
+  }
+
+  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS
   function startAdminMovListener(){
     if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
     const box = $('adminMovList');
@@ -654,7 +716,7 @@ Sarmiento 550, Ituzaingó"></textarea>
       });
   }
 
-  // ACCIONES MOVIMIENTOS
+  // ACCIONES
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const finalName = getCurrentFleteroName();
@@ -704,10 +766,7 @@ Sarmiento 550, Ituzaingó"></textarea>
   async function reportarFaltante(id, movData){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const originalDesc = movData.descripcion || "";
-    const nuevoTexto = prompt(
-      "Editá el detalle y dejá solo lo que sale (lo que falta bórralo):",
-      originalDesc
-    );
+    const nuevoTexto = prompt("Editá el detalle y dejá solo lo que sale (lo que falta bórralo):", originalDesc);
     if (nuevoTexto === null) return;
     const nota = prompt("¿Querés dejar una nota del faltante? (opcional)","");
 
@@ -719,7 +778,6 @@ Sarmiento 550, Ituzaingó"></textarea>
     });
   }
 
-  // ELIMINAR MOVIMIENTO
   async function deleteMov(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     if(!ADMIN_EMAILS.includes(currentUser.email)){
@@ -730,7 +788,6 @@ Sarmiento 550, Ituzaingó"></textarea>
     await db.collection(COL_MOV).doc(id).delete();
   }
 
-  // LISTA DE USUARIOS (ADMIN)
   function startUsersListener(){
     if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
     unsubscribeUsers = db.collection(COL_USERS)
@@ -741,16 +798,12 @@ Sarmiento 550, Ituzaingó"></textarea>
         snap.forEach(doc=>{
           const u = doc.data();
           html += `
-          <tr>
+            <tr>
               <td>${u.email || '—'}</td>
               <td>${u.rol || '—'}</td>
-              <td>
-              ${u.color 
-                ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${u.color};border:1px solid #ccc;"></span>` 
-                : '—'}
-              </td>
+              <td>${u.color ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${u.color};border:1px solid #ccc;"></span>` : '—'}</td>
               <td><button class="ghost" onclick="deleteUser('${doc.id}')">Eliminar</button></td>
-          </tr>
+            </tr>
           `;
         });
         html += '</table>';
@@ -768,91 +821,12 @@ Sarmiento 550, Ituzaingó"></textarea>
     await db.collection(COL_USERS).doc(uid).delete();
   }
 
-  // ---------------- LOGÍSTICA ----------------
-  const DIRECCIONES_REGISTRADAS = [
-    { nombre: "Planta Morón", lat: -34.653, lng: -58.619 },
-    { nombre: "Depósito Centro", lat: -34.61, lng: -58.38 },
-    { nombre: "Italia 1234, Morón", lat: -34.652, lng: -58.62 },
-    { nombre: "Av. Rivadavia 8000, CABA", lat: -34.63, lng: -58.45 },
-    { nombre: "Sarmiento 550, Ituzaingó", lat: -34.65, lng: -58.67 },
-  ];
-
-  function haversineKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2
-          + Math.cos(lat1 * Math.PI / 180)
-          * Math.cos(lat2 * Math.PI / 180)
-          * Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-
-  function findDirByName(name){
-    return DIRECCIONES_REGISTRADAS.find(d => d.nombre.toLowerCase() === name.toLowerCase());
-  }
-
-  function logisticaOrdenarNN(){
-    const origenNombre = ($('#logOrigen') ? $('#logOrigen').value.trim() : '') || 'Planta Morón';
-    const origenObj = findDirByName(origenNombre);
-
-    const txt = $('#logDir').value;
-    const lineas = txt.split('\n').map(l => l.trim()).filter(Boolean);
-
-    if (!lineas.length){
-      $('#logisticaResultado').innerHTML = '<small>No hay direcciones.</small>';
-      return;
-    }
-
-    const pendientes = [];
-    for (const l of lineas){
-      const d = findDirByName(l);
-      pendientes.push(d ? {...d} : { nombre: l, lat: null, lng: null });
-    }
-
-    const recorrido = [];
-    let current = origenObj || { nombre: origenNombre, lat: null, lng: null };
-
-    while (pendientes.some(p => p.lat !== null)){
-      const conCoord = pendientes.filter(p => p.lat !== null);
-      let best = null, bestDist = Infinity;
-      for (const p of conCoord){
-        if (current.lat !== null && current.lng !== null){
-          const dist = haversineKm(current.lat, current.lng, p.lat, p.lng);
-          if (dist < bestDist){ bestDist = dist; best = p; }
-        } else {
-          best = p;
-          break;
-        }
-      }
-      recorrido.push(best);
-      pendientes.splice(pendientes.indexOf(best), 1);
-      current = best;
-    }
-
-    pendientes.forEach(p => recorrido.push(p));
-
-    let html = `<p><strong>Recorrido sugerido</strong></p><div style="font-size:13px">`;
-    html += `<div>0. ▶ <strong>${origenNombre}</strong> (salida)</div>`;
-    recorrido.forEach((p,i)=> html += `<div>${i+1}. ▶ ${p.nombre}</div>`);
-    html += `</div>`;
-
-    // link a Google Maps
-    let gmUrl = "https://www.google.com/maps/dir/" + encodeURIComponent(origenNombre) + "/";
-    gmUrl += recorrido.map(p => encodeURIComponent(p.nombre)).join("/");
-    html += `<a href="${gmUrl}" target="_blank" style="display:inline-block;margin-top:8px;">Abrir en Google Maps</a>`;
-    html += `<small style="display:block;margin-top:6px;color:#6b7280">* Orden aproximado según distancia en línea recta.</small>`;
-
-    $('#logisticaResultado').innerHTML = html;
-  }
-
-  // exponer funciones
+  // exponer
   window.saveRole = saveRole;
   window.chooseFletero = chooseFletero;
   window.confirmFletero = confirmFletero;
   window.deleteUser = deleteUser;
   window.reportarFaltante = reportarFaltante;
-  window.logisticaOrdenarNN = logisticaOrdenarNN;
 </script>
 </body>
 </html>
