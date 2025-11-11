@@ -78,7 +78,7 @@
 <header>
   <h1>Movimientos de Planta — Sistema interno</h1>
 </header>
-<!-- VIDEO ANIMADO DEL AUTO -->
+<!-- GIF CAMIÓN -->
 <div id="loginGifContainer"
      style="display:flex;justify-content:center;align-items:center;width:100%;margin-top:35px;margin-bottom:10px;">
   <img src="20-PM-unscreen.gif" alt="Camión animado" 
@@ -205,6 +205,27 @@
       <small>Histórico (no se borra)</small>
       <div id="adminMovList" class="admin-mov-list"></div>
     </div>
+
+    <!-- LOGÍSTICA -->
+    <div class="card" id="logisticaBox" style="display:none">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Panel de logística</h2>
+      <small>Pegá las direcciones y las ordeno en un recorrido lógico.</small>
+
+      <label>Origen del recorrido
+        <input id="logOrigen" type="text" placeholder="Ej: Planta Morón" />
+      </label>
+
+      <label>Direcciones a entregar (una por línea)
+        <textarea id="logDir" rows="6" placeholder="Ej:
+Italia 1234, Morón
+Av. Rivadavia 8000, CABA
+Sarmiento 550, Ituzaingó"></textarea>
+      </label>
+
+      <button class="ghost" onclick="logisticaOrdenarNN()">Ordenar entregas</button>
+
+      <div id="logisticaResultado" style="margin-top:10px"></div>
+    </div>
   </div>
 
   <!-- LISTA -->
@@ -255,6 +276,7 @@
   let unsubscribeUsers = null;
   let unsubscribeAdminMov = null;
 
+  // LOGIN
   $('btnLogin').onclick = async () => {
     const email = $('loginEmail').value.trim();
     const pass = $('loginPass').value.trim();
@@ -263,6 +285,7 @@
     catch(e){ alert("Error al ingresar: " + e.message); }
   };
 
+  // REGISTRO
   $('btnRegister').onclick = async () => {
     const email = $('loginEmail').value.trim();
     const pass = $('loginPass').value.trim();
@@ -273,6 +296,7 @@
 
   $('btnLogout').onclick = () => auth.signOut();
 
+  // SESIÓN
   auth.onAuthStateChanged(async (user)=>{
     currentUser = user;
     currentUserData = null;
@@ -289,6 +313,7 @@
     $('loginBox').style.display = 'none';
     $('userInfo').textContent = user.email;
 
+    // admin fijo
     if (ADMIN_EMAILS.includes(user.email)) {
       await db.collection(COL_USERS).doc(user.uid).set({
         email: user.email,
@@ -314,6 +339,7 @@
     }
   });
 
+  // picker de colores para fletero
   function buildFleteroColorPicker(){
     const box = $('fleteroColorOptions');
     box.innerHTML = '';
@@ -344,9 +370,11 @@
     await saveRole('fletero');
   }
 
+  // guardar rol
   async function saveRole(rol){
     if(!currentUser) return;
 
+    // si es admin, lo forzamos
     if (ADMIN_EMAILS.includes(currentUser.email)) {
       await db.collection(COL_USERS).doc(currentUser.uid).set({
         email: currentUser.email,
@@ -362,6 +390,7 @@
       return;
     }
 
+    // fletero: con color único
     if (rol === 'fletero') {
       if (!selectedFleteroColor) {
         alert("Elegí un color para tu usuario de fletero.");
@@ -381,6 +410,7 @@
       currentRole = 'fletero';
       currentUserData = { email: currentUser.email, rol: 'fletero', color: selectedFleteroColor };
     } else {
+      // encargado o preparado
       await db.collection(COL_USERS).doc(currentUser.uid).set({
         email: currentUser.email,
         rol: rol,
@@ -394,6 +424,7 @@
     startMovListener();
   }
 
+  // mostrar app según rol
   function showAppForRole(rol){
     $('rolePicker').style.display = 'none';
     $('app').style.display = 'block';
@@ -409,6 +440,8 @@
     $('preparadoBox').style.display = (rol === 'preparado') ? 'block' : 'none';
     $('fleteroBox').style.display   = (rol === 'fletero')   ? 'block' : 'none';
     $('adminBox').style.display     = (rol === 'admin')     ? 'block' : 'none';
+    // mostrar logística solo a admin y encargado
+    $('logisticaBox').style.display = (rol === 'admin' || rol === 'encargado') ? 'block' : 'none';
   }
 
   // CREAR MOVIMIENTO (sin cantidad)
@@ -445,6 +478,7 @@
     $('obs').value = '';
   };
 
+  // FILTROS
   $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
   $('filter-mp').onclick    = () => { setTypeFilter("Materia Prima"); startMovListener(); };
   $('filter-pt').onclick    = () => { setTypeFilter("Productos Terminados"); startMovListener(); };
@@ -456,12 +490,14 @@
     if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
   }
 
+  // nombre fletero
   function getCurrentFleteroName() {
     const inp = $('fleteroNombre');
     if (inp && inp.value.trim()) return inp.value.trim();
     return currentUser ? currentUser.email : '';
   }
 
+  // LISTENER MOVIMIENTOS
   function startMovListener(){
     if (!currentUser || !currentRole) return;
     if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
@@ -478,6 +514,7 @@
           const d = doc.data();
           const created = new Date(d.creadoEn);
 
+          // preparado y fletero no ven entregados
           if ((currentRole === 'preparado' || currentRole === 'fletero') && d.estado === 'Entregado') return;
           if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) return;
 
@@ -495,12 +532,13 @@
           div.className = 'movement';
           const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
 
+          // pintado por fletero dueño
           if (currentRole === 'fletero' && currentUser && d.fleteroUid === currentUser.uid && currentUserData && currentUserData.color) {
             div.style.background = currentUserData.color + '22';
             div.style.borderColor = currentUserData.color;
           }
 
-          // armo la descripción en forma de lista
+          // descripción como lista
           const descLines = (d.descripcion || '').split(/\r?\n/).filter(l => l.trim() !== '');
           const descHTML = descLines.length
             ? descLines.map(l => `<div>► ${l}</div>`).join('')
@@ -531,6 +569,7 @@
 
           const actionsDiv = div.querySelector(`#actions-${doc.id}`);
 
+          // PREPARADO
           if (currentRole === 'preparado') {
             const btnListo = document.createElement('button');
             btnListo.className = 'ghost';
@@ -552,6 +591,7 @@
             actionsDiv.appendChild(btnFaltante);
           }
 
+          // FLETERO
           if (currentRole === 'fletero') {
             const btnTomar = document.createElement('button');
             btnTomar.className = 'ghost';
@@ -572,6 +612,7 @@
             actionsDiv.appendChild(btnEntregado);
           }
 
+          // ADMIN
           if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
             const x = document.createElement('button');
             x.textContent = '×';
@@ -586,6 +627,7 @@
       });
   }
 
+  // ADMIN: lista completa
   function startAdminMovListener(){
     if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
     const box = $('adminMovList');
@@ -612,6 +654,7 @@
       });
   }
 
+  // ACCIONES MOVIMIENTOS
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const finalName = getCurrentFleteroName();
@@ -676,6 +719,7 @@
     });
   }
 
+  // ELIMINAR MOVIMIENTO
   async function deleteMov(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     if(!ADMIN_EMAILS.includes(currentUser.email)){
@@ -686,6 +730,7 @@
     await db.collection(COL_MOV).doc(id).delete();
   }
 
+  // LISTA DE USUARIOS (ADMIN)
   function startUsersListener(){
     if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
     unsubscribeUsers = db.collection(COL_USERS)
@@ -701,12 +746,12 @@
               <td>${u.rol || '—'}</td>
               <td>
               ${u.color 
-              ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${u.color};border:1px solid #ccc;"></span>` 
-         : '—'}
-    </td>
-    <td><button class="ghost" onclick="deleteUser('${doc.id}')">Eliminar</button></td>
-  </tr>
-`;
+                ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${u.color};border:1px solid #ccc;"></span>` 
+                : '—'}
+              </td>
+              <td><button class="ghost" onclick="deleteUser('${doc.id}')">Eliminar</button></td>
+          </tr>
+          `;
         });
         html += '</table>';
         box.innerHTML = html;
@@ -723,16 +768,91 @@
     await db.collection(COL_USERS).doc(uid).delete();
   }
 
+  // ---------------- LOGÍSTICA ----------------
+  const DIRECCIONES_REGISTRADAS = [
+    { nombre: "Planta Morón", lat: -34.653, lng: -58.619 },
+    { nombre: "Depósito Centro", lat: -34.61, lng: -58.38 },
+    { nombre: "Italia 1234, Morón", lat: -34.652, lng: -58.62 },
+    { nombre: "Av. Rivadavia 8000, CABA", lat: -34.63, lng: -58.45 },
+    { nombre: "Sarmiento 550, Ituzaingó", lat: -34.65, lng: -58.67 },
+  ];
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2
+          + Math.cos(lat1 * Math.PI / 180)
+          * Math.cos(lat2 * Math.PI / 180)
+          * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function findDirByName(name){
+    return DIRECCIONES_REGISTRADAS.find(d => d.nombre.toLowerCase() === name.toLowerCase());
+  }
+
+  function logisticaOrdenarNN(){
+    const origenNombre = ($('#logOrigen') ? $('#logOrigen').value.trim() : '') || 'Planta Morón';
+    const origenObj = findDirByName(origenNombre);
+
+    const txt = $('#logDir').value;
+    const lineas = txt.split('\n').map(l => l.trim()).filter(Boolean);
+
+    if (!lineas.length){
+      $('#logisticaResultado').innerHTML = '<small>No hay direcciones.</small>';
+      return;
+    }
+
+    const pendientes = [];
+    for (const l of lineas){
+      const d = findDirByName(l);
+      pendientes.push(d ? {...d} : { nombre: l, lat: null, lng: null });
+    }
+
+    const recorrido = [];
+    let current = origenObj || { nombre: origenNombre, lat: null, lng: null };
+
+    while (pendientes.some(p => p.lat !== null)){
+      const conCoord = pendientes.filter(p => p.lat !== null);
+      let best = null, bestDist = Infinity;
+      for (const p of conCoord){
+        if (current.lat !== null && current.lng !== null){
+          const dist = haversineKm(current.lat, current.lng, p.lat, p.lng);
+          if (dist < bestDist){ bestDist = dist; best = p; }
+        } else {
+          best = p;
+          break;
+        }
+      }
+      recorrido.push(best);
+      pendientes.splice(pendientes.indexOf(best), 1);
+      current = best;
+    }
+
+    pendientes.forEach(p => recorrido.push(p));
+
+    let html = `<p><strong>Recorrido sugerido</strong></p><div style="font-size:13px">`;
+    html += `<div>0. ▶ <strong>${origenNombre}</strong> (salida)</div>`;
+    recorrido.forEach((p,i)=> html += `<div>${i+1}. ▶ ${p.nombre}</div>`);
+    html += `</div>`;
+
+    // link a Google Maps
+    let gmUrl = "https://www.google.com/maps/dir/" + encodeURIComponent(origenNombre) + "/";
+    gmUrl += recorrido.map(p => encodeURIComponent(p.nombre)).join("/");
+    html += `<a href="${gmUrl}" target="_blank" style="display:inline-block;margin-top:8px;">Abrir en Google Maps</a>`;
+    html += `<small style="display:block;margin-top:6px;color:#6b7280">* Orden aproximado según distancia en línea recta.</small>`;
+
+    $('#logisticaResultado').innerHTML = html;
+  }
+
+  // exponer funciones
   window.saveRole = saveRole;
   window.chooseFletero = chooseFletero;
   window.confirmFletero = confirmFletero;
   window.deleteUser = deleteUser;
   window.reportarFaltante = reportarFaltante;
+  window.logisticaOrdenarNN = logisticaOrdenarNN;
 </script>
 </body>
 </html>
-
-
-
-
-
