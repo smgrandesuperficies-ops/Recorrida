@@ -18,7 +18,7 @@
     h1{font-size:18px;margin:0}
     .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 1px 4px rgba(15,23,42,0.08);margin-top:12px}
     label{display:block;margin-top:8px;font-size:13px;color:#334155}
-    input[type=text],input[type=password],input[type=number],input[type=datetime-local],select,textarea{
+    input[type=text],input[type=password],input[type=datetime-local],select,textarea{
       width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px;background:#f8fafc
     }
     button{background:var(--primary);color:white;border:0;padding:8px 12px;border-radius:999px;font-weight:600;margin-top:10px;cursor:pointer}
@@ -31,7 +31,6 @@
     .estado-Listo\ para\ retirar{background:#fef9c3;color:#854d0e}
     .estado-En\ viaje{background:#eff8ff;color:#175cd3}
     .estado-Entregado{background:#ecfdf3;color:#027a48}
-    /* nuevo estado faltante */
     .estado-Faltante{background:#fee2e2;color:#b91c1c}
     small{color:var(--muted)}
     .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
@@ -152,14 +151,12 @@
         </div>
       </div>
       <label>Producto / Descripción
-        <textarea id="descripcion" rows="3" placeholder="Detalle de los productos, cajas, bultos..."></textarea>
+        <textarea id="descripcion" rows="3" placeholder="Una cosa por línea. Ej:
+20 cajas palo santo
+5 cajas sahumerios
+3 bolsas carbón"></textarea>
       </label>
       <div class="row">
-        <div class="col">
-          <label>Cantidad
-            <input id="cantidad" type="number" min="1" value="1" />
-          </label>
-        </div>
         <div class="col">
           <label>Prioridad
             <select id="prioridad">
@@ -231,7 +228,6 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 <script>
-  // admin fijo
   const ADMIN_EMAILS = ["gerencia@sagradamadre.com"];
 
   const firebaseConfig = {
@@ -251,7 +247,6 @@
   const COL_MOV = "movimientos";
   const COL_USERS = "usuarios";
 
-  // paleta fija para fleteros
   const FLETERO_COLORS = ["#f97316","#0ea5e9","#22c55e","#a855f7","#f43f5e","#eab308"];
   let selectedFleteroColor = null;
 
@@ -263,7 +258,6 @@
   let unsubscribeUsers = null;
   let unsubscribeAdminMov = null;
 
-  // LOGIN
   $('btnLogin').onclick = async () => {
     const email = $('loginEmail').value.trim();
     const pass = $('loginPass').value.trim();
@@ -272,7 +266,6 @@
     catch(e){ alert("Error al ingresar: " + e.message); }
   };
 
-  // REGISTRO
   $('btnRegister').onclick = async () => {
     const email = $('loginEmail').value.trim();
     const pass = $('loginPass').value.trim();
@@ -283,7 +276,6 @@
 
   $('btnLogout').onclick = () => auth.signOut();
 
-  // SESIÓN
   auth.onAuthStateChanged(async (user)=>{
     currentUser = user;
     currentUserData = null;
@@ -300,7 +292,6 @@
     $('loginBox').style.display = 'none';
     $('userInfo').textContent = user.email;
 
-    // si es admin, lo forzamos
     if (ADMIN_EMAILS.includes(user.email)) {
       await db.collection(COL_USERS).doc(user.uid).set({
         email: user.email,
@@ -312,7 +303,6 @@
     const ref = db.collection(COL_USERS).doc(user.uid);
     const doc = await ref.get();
     if(!doc.exists){
-      // no tiene rol todavía → mostrar picker
       $('rolePicker').style.display = 'block';
       $('app').style.display = 'none';
       return;
@@ -327,12 +317,10 @@
     }
   });
 
-  // construir picker de colores fletero
   function buildFleteroColorPicker(){
     const box = $('fleteroColorOptions');
     box.innerHTML = '';
     selectedFleteroColor = null;
-
     FLETERO_COLORS.forEach(col=>{
       const div = document.createElement('div');
       div.className = 'color-pill';
@@ -362,7 +350,6 @@
   async function saveRole(rol){
     if(!currentUser) return;
 
-    // admin fijo
     if (ADMIN_EMAILS.includes(currentUser.email)) {
       await db.collection(COL_USERS).doc(currentUser.uid).set({
         email: currentUser.email,
@@ -378,7 +365,6 @@
       return;
     }
 
-    // fletero con color único
     if (rol === 'fletero') {
       if (!selectedFleteroColor) {
         alert("Elegí un color para tu usuario de fletero.");
@@ -398,7 +384,6 @@
       currentRole = 'fletero';
       currentUserData = { email: currentUser.email, rol: 'fletero', color: selectedFleteroColor };
     } else {
-      // encargado o preparado
       await db.collection(COL_USERS).doc(currentUser.uid).set({
         email: currentUser.email,
         rol: rol,
@@ -429,7 +414,7 @@
     $('adminBox').style.display     = (rol === 'admin')     ? 'block' : 'none';
   }
 
-  // CREAR MOVIMIENTO
+  // CREAR MOVIMIENTO (sin cantidad)
   $('btnCreate').onclick = async () => {
     if(currentRole !== 'encargado' && currentRole !== 'admin'){
       alert("Solo un encargado o el admin puede crear movimientos");
@@ -441,7 +426,6 @@
       origen: $('origen').value.trim(),
       destino: $('destino').value.trim(),
       descripcion: $('descripcion').value.trim(),
-      cantidad: Number($('cantidad').value || 0),
       prioridad: $('prioridad').value,
       tipoViaje: $('tipoViaje').value,
       obs: $('obs').value.trim(),
@@ -461,11 +445,9 @@
       alert("No se pudo guardar en Firebase: " + e.message);
     }
     $('descripcion').value = '';
-    $('cantidad').value = 1;
     $('obs').value = '';
   };
 
-  // FILTROS
   $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
   $('filter-mp').onclick    = () => { setTypeFilter("Materia Prima"); startMovListener(); };
   $('filter-pt').onclick    = () => { setTypeFilter("Productos Terminados"); startMovListener(); };
@@ -477,14 +459,12 @@
     if(val === 'Productos Terminados') $('filter-pt').classList.add('filter-active');
   }
 
-  // nombre del fletero actual
   function getCurrentFleteroName() {
     const inp = $('fleteroNombre');
     if (inp && inp.value.trim()) return inp.value.trim();
     return currentUser ? currentUser.email : '';
   }
 
-  // LISTENER MOVIMIENTOS
   function startMovListener(){
     if (!currentUser || !currentRole) return;
     if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
@@ -501,9 +481,7 @@
           const d = doc.data();
           const created = new Date(d.creadoEn);
 
-          // preparado y fletero no ven entregados
           if ((currentRole === 'preparado' || currentRole === 'fletero') && d.estado === 'Entregado') return;
-
           if (currentTypeFilter !== 'todos' && d.tipoViaje !== currentTypeFilter) return;
 
           count++;
@@ -520,17 +498,22 @@
           div.className = 'movement';
           const estadoClass = 'estado-' + d.estado.replace(/ /g, '\\ ');
 
-          // pintar si es el fletero dueño
           if (currentRole === 'fletero' && currentUser && d.fleteroUid === currentUser.uid && currentUserData && currentUserData.color) {
             div.style.background = currentUserData.color + '22';
             div.style.borderColor = currentUserData.color;
           }
 
+          // armo la descripción en forma de lista
+          const descLines = (d.descripcion || '').split(/\r?\n/).filter(l => l.trim() !== '');
+          const descHTML = descLines.length
+            ? descLines.map(l => `<div>► ${l}</div>`).join('')
+            : '(sin descripción)';
+
           div.innerHTML = `
             <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
               <div>
-                <strong>${d.descripcion || '(sin descripción)'} </strong>
-                <span class="badge ${estadoClass}">${d.estado}</span>
+                ${descHTML}
+                <span class="badge ${estadoClass}" style="margin-top:4px;display:inline-block">${d.estado}</span>
               </div>
               <small>${created.toLocaleTimeString()}</small>
             </div>
@@ -540,7 +523,6 @@
               <small>Destino:</small> ${d.destino || '—'}
             </div>
             <div style="margin-top:4px">
-              <small>Cant:</small> ${d.cantidad || 0} |
               <small>Prioridad:</small> ${d.prioridad || '—'} |
               <small>Tipo:</small> ${d.tipoViaje || '—'} |
               <small>Fletero:</small> ${d.fletero || '—'}
@@ -552,7 +534,6 @@
 
           const actionsDiv = div.querySelector(`#actions-${doc.id}`);
 
-          // PREPARADO
           if (currentRole === 'preparado') {
             const btnListo = document.createElement('button');
             btnListo.className = 'ghost';
@@ -566,7 +547,6 @@
             btnHorario.onclick = () => setHorarioEstimado(doc.id);
             actionsDiv.appendChild(btnHorario);
 
-            // NUEVO: reportar faltante
             const btnFaltante = document.createElement('button');
             btnFaltante.className = 'ghost';
             btnFaltante.style.color = '#b91c1c';
@@ -575,7 +555,6 @@
             actionsDiv.appendChild(btnFaltante);
           }
 
-          // FLETERO
           if (currentRole === 'fletero') {
             const btnTomar = document.createElement('button');
             btnTomar.className = 'ghost';
@@ -596,7 +575,6 @@
             actionsDiv.appendChild(btnEntregado);
           }
 
-          // ADMIN: puede borrar
           if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
             const x = document.createElement('button');
             x.textContent = '×';
@@ -611,7 +589,6 @@
       });
   }
 
-  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS
   function startAdminMovListener(){
     if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
     const box = $('adminMovList');
@@ -621,10 +598,14 @@
         box.innerHTML = '';
         snap.forEach(doc=>{
           const d = doc.data();
+          const descLines = (d.descripcion || '').split(/\r?\n/).filter(l => l.trim() !== '');
+          const descHTML = descLines.length
+            ? descLines.map(l => `► ${l}`).join(' | ')
+            : '(sin desc)';
           const div = document.createElement('div');
           div.className = 'admin-mov-item';
           div.innerHTML = `
-            <strong>${d.descripcion || '(sin desc)'}</strong> — ${d.estado} —
+            <strong>${descHTML}</strong> — ${d.estado} —
             <small>${new Date(d.creadoEn).toLocaleString()}</small><br>
             <small>Enc: ${d.encargado || '—'} | Tipo: ${d.tipoViaje || '—'} | Fletero: ${d.fletero || '—'}</small>
             ${d.faltanteOriginal ? `<div><small>Original:</small> ${d.faltanteOriginal}</div>` : ''}
@@ -634,7 +615,6 @@
       });
   }
 
-  // ACCIONES MOVIMIENTOS
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const finalName = getCurrentFleteroName();
@@ -681,7 +661,6 @@
     });
   }
 
-  // NUEVO: reportar faltante
   async function reportarFaltante(id, movData){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const originalDesc = movData.descripcion || "";
@@ -690,7 +669,6 @@
       originalDesc
     );
     if (nuevoTexto === null) return;
-
     const nota = prompt("¿Querés dejar una nota del faltante? (opcional)","");
 
     await db.collection(COL_MOV).doc(id).update({
@@ -701,7 +679,6 @@
     });
   }
 
-  // ELIMINAR MOVIMIENTO (SOLO ADMIN)
   async function deleteMov(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     if(!ADMIN_EMAILS.includes(currentUser.email)){
@@ -712,7 +689,6 @@
     await db.collection(COL_MOV).doc(id).delete();
   }
 
-  // LISTA DE USUARIOS (SOLO ADMIN)
   function startUsersListener(){
     if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
     unsubscribeUsers = db.collection(COL_USERS)
@@ -746,7 +722,6 @@
     await db.collection(COL_USERS).doc(uid).delete();
   }
 
-  // exponer funciones usadas en HTML
   window.saveRole = saveRole;
   window.chooseFletero = chooseFletero;
   window.confirmFletero = confirmFletero;
