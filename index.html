@@ -660,34 +660,48 @@ Cliente 3 - Calle ..."></textarea>
   }
 
   // LOGISTICA LISTENER
-  function startLogisticaListener(){
-    if (unsubscribeLogistica) { unsubscribeLogistica(); unsubscribeLogistica = null; }
-    const box = $('logisticaList');
-    unsubscribeLogistica = db.collection(COL_LOG)
-      .orderBy("creadoEn","desc")
-      .onSnapshot(snap=>{
-        box.innerHTML = '';
-        let lastDate = null;
-        snap.forEach(doc=>{
-          const d = doc.data();
-          const fecha = new Date(d.creadoEn).toLocaleDateString();
-          if (lastDate !== fecha){
-            const t = document.createElement('div');
-            t.textContent = fecha;
-            t.className = 'logistica-date';
-            box.appendChild(t);
-            lastDate = fecha;
-          }
-          const item = document.createElement('div');
-          item.className = 'logistica-item';
-          item.innerHTML = `
-            <strong>${d.chofer || '—'}</strong> – Origen: ${d.origen}<br>
-            ${d.direcciones.map(x => '• ' + x).join('<br>')}
-          `;
-          box.appendChild(item);
-        });
+function startLogisticaListener(){
+  if (unsubscribeLogistica) { unsubscribeLogistica(); unsubscribeLogistica = null; }
+  const box = $('logisticaList');
+  unsubscribeLogistica = db.collection(COL_LOG)
+    .orderBy("creadoEn","desc")
+    .onSnapshot(snap=>{
+      box.innerHTML = '';
+      let lastDate = null;
+      snap.forEach(doc=>{
+        const d = doc.data();
+        const fecha = new Date(d.creadoEn).toLocaleDateString();
+
+        // armamos el link de maps
+        const origin = encodeURIComponent(d.origen || '');
+        const stops = Array.isArray(d.direcciones) ? d.direcciones : [];
+        let mapsUrl = '';
+        if (stops.length > 0) {
+          const destination = encodeURIComponent(stops[stops.length - 1]); // la última como destino
+          const waypointsArr = stops.slice(0, stops.length - 1).map(a => encodeURIComponent(a));
+          const waypoints = waypointsArr.join('|');
+          // armamos la url
+          mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}`;
+        }
+
+        if (lastDate !== fecha){
+          const t = document.createElement('div');
+          t.textContent = fecha;
+          t.className = 'logistica-date';
+          box.appendChild(t);
+          lastDate = fecha;
+        }
+        const item = document.createElement('div');
+        item.className = 'logistica-item';
+        item.innerHTML = `
+          <strong>${d.chofer || '—'}</strong> – Origen: ${d.origen}<br>
+          ${stops.map(x => '• ' + x).join('<br>')}
+          ${mapsUrl ? `<div style="margin-top:4px"><a href="${mapsUrl}" target="_blank" style="color:#2563eb;font-weight:600">Abrir en Google Maps</a></div>` : ''}
+        `;
+        box.appendChild(item);
       });
-  }
+    });
+}
 
   // ADMIN: LISTA COMPLETA DE MOVIMIENTOS
   function startAdminMovListener(){
@@ -830,3 +844,4 @@ Cliente 3 - Calle ..."></textarea>
 </script>
 </body>
 </html>
+
