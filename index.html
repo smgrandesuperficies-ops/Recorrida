@@ -526,29 +526,32 @@ Cliente 3, dirección..."></textarea>
   }
 
   function showAppForRole(rol){
-    $('rolePicker').style.display = 'none';
-    $('app').style.display = 'block';
-    $('userRole').textContent = 'Rol: ' + rol;
+  // por las dudas, que nunca rompa si falta algún div
+  if ($('rolePicker')) $('rolePicker').style.display = 'none';
+  if ($('app'))        $('app').style.display        = 'block';
+  if ($('userRole'))   $('userRole').textContent     = 'Rol: ' + rol;
 
-    document.body.className = '';
-    if(rol === 'encargado') document.body.classList.add('role-encargado');
-    if(rol === 'preparado') document.body.classList.add('role-preparado');
-    if(rol === 'fletero')   document.body.classList.add('role-fletero');
-    if(rol === 'admin')     document.body.classList.add('role-admin');
-    if(rol === 'logistica') document.body.classList.add('role-logistica');
-    if(rol === 'cobranzas') document.body.classList.add('role-cobranzas');
-    if(rol === 'fletero_cob') document.body.classList.add('role-fletero_cob');
+  // clases de color por rol
+  document.body.className = '';
+  if (rol === 'encargado')    document.body.classList.add('role-encargado');
+  if (rol === 'preparado')    document.body.classList.add('role-preparado');
+  if (rol === 'fletero')      document.body.classList.add('role-fletero');
+  if (rol === 'admin')        document.body.classList.add('role-admin');
+  if (rol === 'logistica')    document.body.classList.add('role-logistica');
+  if (rol === 'cobranzas')    document.body.classList.add('role-cobranzas');
+  if (rol === 'fletero_cob')  document.body.classList.add('role-fletero_cob');
 
-    $('encargadoBox').style.display = (rol === 'encargado' || rol === 'admin') ? 'block' : 'none';
-    $('preparadoBox').style.display = (rol === 'preparado') ? 'block' : 'none';
-    $('fleteroBox').style.display   = (rol === 'fletero')   ? 'block' : 'none';
-    $('adminBox').style.display     = (rol === 'admin')     ? 'block' : 'none';
-    $('logisticaBox').style.display = (rol === 'logistica') ? 'block' : 'none';
+  // mostrar / ocultar módulos, sin romper si falta alguno
+  safeShow('encargadoBox',  (rol === 'encargado' || rol === 'admin'));
+  safeShow('preparadoBox',  (rol === 'preparado'));
+  safeShow('fleteroBox',    (rol === 'fletero'));
+  safeShow('adminBox',      (rol === 'admin'));
+  safeShow('logisticaBox',  (rol === 'logistica'));
 
-    // NUEVOS MÓDULOS POR ROL
-    $('cobranzasBox').style.display  = (rol === 'cobranzas')   ? 'block' : 'none';
-    $('fleteroCobBox').style.display = (rol === 'fletero_cob') ? 'block' : 'none';
-  }
+  // módulos nuevos
+  safeShow('cobranzasBox',  (rol === 'cobranzas'));
+  safeShow('fleteroCobBox', (rol === 'fletero_cob'));
+}
 
   // CREAR MOVIMIENTO (sin cantidad)
   $('btnCreate').onclick = async () => {
@@ -1206,4 +1209,5 @@ Cliente 3, dirección..."></textarea>
 </script>
 </body>
 </html>
+
 
