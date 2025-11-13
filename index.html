@@ -18,7 +18,7 @@
     h1{font-size:18px;margin:0}
     .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 1px 4px rgba(15,23,42,0.08);margin-top:12px}
     label{display:block;margin-top:8px;font-size:13px;color:#334155}
-    input[type=text],input[type=password],input[type=datetime-local],select,textarea{
+    input[type=text],input[type=password],input[type=datetime-local],input[type=number],select,textarea{
       width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-top:6px;background:#f8fafc
     }
     button{background:var(--primary);color:white;border:0;padding:8px 12px;border-radius:999px;font-weight:600;margin-top:10px;cursor:pointer}
@@ -56,10 +56,16 @@
     body.role-admin     { --primary:#0f172a; --bg:#e5e7eb; }
     body.role-logistica { --primary:#7c3aed; --bg:#ede9fe; }
 
+    /* NUEVOS ROLES COBRANZAS */
+    body.role-cobranzas    { --primary:#0ea5e9; --bg:#e0f2fe; }
+    body.role-fletero_cob  { --primary:#fb7185; --bg:#ffe4e6; }
+
     body.role-preparado header{background:linear-gradient(90deg,#16a34a,#15803d);}
     body.role-fletero header{background:linear-gradient(90deg,#f97316,#ea580c);}
     body.role-admin header{background:linear-gradient(90deg,#0f172a,#1f2937);}
     body.role-logistica header{background:linear-gradient(90deg,#7c3aed,#6d28d9);}
+    body.role-cobranzas header{background:linear-gradient(90deg,#0ea5e9,#0284c7);}
+    body.role-fletero_cob header{background:linear-gradient(90deg,#fb7185,#e11d48);}
 
     .admin-table{width:100%;border-collapse:collapse;margin-top:6px}
     .admin-table th,.admin-table td{border:1px solid #e2e8f0;padding:6px;font-size:13px;text-align:left}
@@ -77,6 +83,24 @@
 
     /* tabla recorridas */
     .recorridas-list small{display:block;margin-top:2px}
+
+    /* COBRANZAS */
+    .cob-list-item{
+      border:1px solid #e2e8f0;
+      border-radius:8px;
+      padding:6px;
+      margin-top:6px;
+      font-size:13px;
+      background:#fff;
+    }
+    .cob-badge{
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:999px;
+      font-size:11px;
+      background:#fee2e2;
+      color:#b91c1c;
+    }
   </style>
 </head>
 <body>
@@ -228,6 +252,55 @@ Cliente 3, dirección..."></textarea>
       <small>Histórico (no se borra)</small>
       <div id="adminMovList" class="admin-mov-list"></div>
     </div>
+
+    <!-- COBRANZAS -->
+    <div class="card" id="cobranzasBox" style="display:none">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Cobranzas</h2>
+      <small>Gestión de clientes y movimientos de cobranzas.</small>
+
+      <h3 style="margin-top:10px;font-size:13px">Alta de cliente</h3>
+      <label>Nombre del cliente
+        <input id="cobClienteNombre" type="text" placeholder="Ej: Almacén La Esquina" />
+      </label>
+      <label>Dirección completa (para Maps)
+        <input id="cobClienteDir" type="text" placeholder="Ej: Calle 123, Ciudad, Provincia" />
+      </label>
+      <label>Notas
+        <textarea id="cobClienteNotas" rows="2" placeholder="Horario de cobro, referencias, etc."></textarea>
+      </label>
+      <button id="btnCobCrearCliente">Guardar cliente</button>
+
+      <h3 style="margin-top:14px;font-size:13px">Nuevo movimiento de cobranza</h3>
+      <label>Cliente
+        <select id="cobClienteSelect">
+          <option value="">Seleccionar cliente...</option>
+        </select>
+      </label>
+      <label>Importe a cobrar
+        <input id="cobImporte" type="number" min="0" step="0.01" placeholder="Ej: 150000" />
+      </label>
+      <label>Observaciones
+        <textarea id="cobObs" rows="2" placeholder="Detalle del recibo, forma de pago esperada, etc."></textarea>
+      </label>
+      <button id="btnCobCrearMov">Crear movimiento de cobranza</button>
+
+      <h3 style="margin-top:14px;font-size:13px">Clientes registrados</h3>
+      <div id="cobClientesList"></div>
+
+      <h3 style="margin-top:14px;font-size:13px">Movimientos de cobranza</h3>
+      <div id="cobMovsList"></div>
+    </div>
+
+    <!-- FLETERO DE COBRANZAS -->
+    <div class="card" id="fleteroCobBox" style="display:none">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Fletero de Cobranzas</h2>
+      <small>Ver los movimientos y marcar como retirado.</small>
+      <label>Mi nombre (fletero cobranzas)
+        <input id="fleteroCobNombre" type="text" placeholder="Ej: Flete Cobranzas 1" />
+      </label>
+      <div id="fleteroCobMovsList" style="margin-top:10px"></div>
+    </div>
+
   </div>
 
   <!-- LISTA -->
@@ -271,6 +344,11 @@ Cliente 3, dirección..."></textarea>
   const COL_USERS = "usuarios";
   const COL_RECORRIDAS = "recorridas";
 
+  // NUEVAS COLECCIONES COBRANZAS
+  const COL_COB_CLIENTES   = "cob_clientes";
+  const COL_COB_RECORRIDAS = "cob_recorridas";
+  const COL_COB_MOV        = "cob_mov";
+
   const FLETERO_COLORS = ["#f97316","#0ea5e9","#22c55e","#a855f7","#f43f5e","#eab308"];
   let selectedFleteroColor = null;
 
@@ -282,6 +360,9 @@ Cliente 3, dirección..."></textarea>
   let unsubscribeUsers = null;
   let unsubscribeAdminMov = null;
   let unsubscribeRecorridas = null;
+  // NUEVOS UNSUB COBRANZAS
+  let unsubscribeCobClientes = null;
+  let unsubscribeCobMovs = null;
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -316,6 +397,8 @@ Cliente 3, dirección..."></textarea>
       if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
       if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
       if (unsubscribeRecorridas) { unsubscribeRecorridas(); unsubscribeRecorridas = null; }
+      if (unsubscribeCobClientes) { unsubscribeCobClientes(); unsubscribeCobClientes = null; }
+      if (unsubscribeCobMovs) { unsubscribeCobMovs(); unsubscribeCobMovs = null; }
       return;
     }
     $('loginBox').style.display = 'none';
@@ -346,6 +429,10 @@ Cliente 3, dirección..."></textarea>
     }
     if (currentRole === 'logistica') {
       startRecorridasListener();
+    }
+    if (currentRole === 'cobranzas' || currentRole === 'fletero_cob') {
+      startCobClientesListener();
+      startCobMovsListener();
     }
   });
 
@@ -429,6 +516,10 @@ Cliente 3, dirección..."></textarea>
     showAppForRole(currentRole);
     startMovListener();
     if (rol === 'logistica') startRecorridasListener();
+    if (rol === 'cobranzas' || rol === 'fletero_cob') {
+      startCobClientesListener();
+      startCobMovsListener();
+    }
   }
 
   function showAppForRole(rol){
@@ -442,12 +533,18 @@ Cliente 3, dirección..."></textarea>
     if(rol === 'fletero')   document.body.classList.add('role-fletero');
     if(rol === 'admin')     document.body.classList.add('role-admin');
     if(rol === 'logistica') document.body.classList.add('role-logistica');
+    if(rol === 'cobranzas') document.body.classList.add('role-cobranzas');
+    if(rol === 'fletero_cob') document.body.classList.add('role-fletero_cob');
 
     $('encargadoBox').style.display = (rol === 'encargado' || rol === 'admin') ? 'block' : 'none';
     $('preparadoBox').style.display = (rol === 'preparado') ? 'block' : 'none';
     $('fleteroBox').style.display   = (rol === 'fletero')   ? 'block' : 'none';
     $('adminBox').style.display     = (rol === 'admin')     ? 'block' : 'none';
     $('logisticaBox').style.display = (rol === 'logistica') ? 'block' : 'none';
+
+    // NUEVOS MÓDULOS POR ROL
+    $('cobranzasBox').style.display  = (rol === 'cobranzas')   ? 'block' : 'none';
+    $('fleteroCobBox').style.display = (rol === 'fletero_cob') ? 'block' : 'none';
   }
 
   // CREAR MOVIMIENTO (sin cantidad)
@@ -725,17 +822,18 @@ Cliente 3, dirección..."></textarea>
   }
 
   async function reportarFaltante(id, movData){
-  if(!currentUser){ alert("Iniciá sesión"); return; }
+    if(!currentUser){ alert("Iniciá sesión"); return; }
 
-  const originalDesc = movData.descripcion || "";
-  const nota = prompt("Describí brevemente el faltante (opcional):","");
+    const originalDesc = movData.descripcion || "";
+    const nota = prompt("Describí brevemente el faltante (opcional):","");
 
-  await db.collection(COL_MOV).doc(id).update({
-    estado: "Faltante",
-    obs: nota ? nota : (movData.obs || ""),
-    faltanteOriginal: originalDesc
-  });
-}
+    await db.collection(COL_MOV).doc(id).update({
+      estado: "Faltante",
+      obs: nota ? nota : (movData.obs || ""),
+      faltanteOriginal: originalDesc
+    });
+  }
+
   async function deleteMov(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     if(!ADMIN_EMAILS.includes(currentUser.email)){
@@ -886,6 +984,216 @@ Cliente 3, dirección..."></textarea>
     }
   };
 
+  // ----------- COBRANZAS -----------
+
+  function buildMapsLinkManual(dir){
+    if (!dir) return '#';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dir)}`;
+  }
+
+  function getCurrentFleteroCobName(){
+    const inp = $('fleteroCobNombre');
+    if (inp && inp.value.trim()) return inp.value.trim();
+    return currentUser ? currentUser.email : '';
+  }
+
+  // Alta cliente cobranzas
+  if ($('btnCobCrearCliente')) {
+    $('btnCobCrearCliente').onclick = async () => {
+      if (!currentUser) { alert("Iniciá sesión"); return; }
+      const nombre = $('cobClienteNombre').value.trim();
+      const dir    = $('cobClienteDir').value.trim();
+      const notas  = $('cobClienteNotas').value.trim();
+      if (!nombre || !dir) {
+        alert("Completá al menos nombre y dirección del cliente.");
+        return;
+      }
+      try{
+        await db.collection(COL_COB_CLIENTES).add({
+          nombre,
+          direccion: dir,
+          notas,
+          creadoEn: new Date().toISOString(),
+          creadoPor: currentUser.email || null
+        });
+        $('cobClienteNombre').value = '';
+        $('cobClienteDir').value = '';
+        $('cobClienteNotas').value = '';
+      }catch(e){
+        alert("No se pudo crear el cliente: " + e.message);
+      }
+    };
+  }
+
+  // Crear movimiento de cobranza
+  if ($('btnCobCrearMov')) {
+    $('btnCobCrearMov').onclick = async () => {
+      if (!currentUser) { alert("Iniciá sesión"); return; }
+      if (currentRole !== 'cobranzas') {
+        alert("Solo el rol cobranzas puede crear movimientos de cobranza.");
+        return;
+      }
+      const sel = $('cobClienteSelect');
+      const clienteId = sel ? sel.value : '';
+      const clienteNombre = sel && sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : '';
+      const importe = parseFloat($('cobImporte').value || '0');
+      const obs = $('cobObs').value.trim();
+
+      if (!clienteId) {
+        alert("Elegí un cliente.");
+        return;
+      }
+      if (!importe || importe <= 0) {
+        alert("Ingresá un importe válido.");
+        return;
+      }
+
+      // dirección se trae del option data-dir si está
+      let direccion = '';
+      if (sel && sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].dataset.dir) {
+        direccion = sel.options[sel.selectedIndex].dataset.dir;
+      }
+
+      try{
+        await db.collection(COL_COB_MOV).add({
+          clienteId,
+          clienteNombre,
+          direccion,
+          importe,
+          obs,
+          estado: "Pendiente",
+          creadoEn: new Date().toISOString(),
+          creadoPor: currentUser.email || null,
+          retirado: false,
+          retiradoPor: null,
+          retiradoUid: null,
+          retiradoEn: null
+        });
+        $('cobImporte').value = '';
+        $('cobObs').value = '';
+      }catch(e){
+        alert("No se pudo crear el movimiento de cobranza: " + e.message);
+      }
+    };
+  }
+
+  function startCobClientesListener(){
+    if (!currentUser) return;
+    if (unsubscribeCobClientes) { unsubscribeCobClientes(); unsubscribeCobClientes = null; }
+
+    unsubscribeCobClientes = db.collection(COL_COB_CLIENTES)
+      .orderBy("nombre","asc")
+      .onSnapshot(snap=>{
+        const sel = $('cobClienteSelect');
+        const list = $('cobClientesList');
+        if (sel) {
+          sel.innerHTML = '<option value="">Seleccionar cliente...</option>';
+        }
+        if (list) {
+          list.innerHTML = '';
+        }
+        snap.forEach(doc=>{
+          const c = doc.data();
+          const optText = c.nombre || c.direccion || 'Cliente sin nombre';
+          if (sel) {
+            const opt = document.createElement('option');
+            opt.value = doc.id;
+            opt.textContent = optText;
+            if (c.direccion) opt.dataset.dir = c.direccion;
+            sel.appendChild(opt);
+          }
+          if (list) {
+            const div = document.createElement('div');
+            div.className = 'cob-list-item';
+            div.innerHTML = `
+              <strong>${c.nombre || 'Cliente sin nombre'}</strong><br>
+              <small>Dirección:</small> ${c.direccion || '—'}<br>
+              ${c.direccion ? `<a href="${buildMapsLinkManual(c.direccion)}" target="_blank">Ver en Maps</a>` : ''}
+              ${c.notas ? `<div><small>Notas:</small> ${c.notas}</div>` : ''}
+            `;
+            list.appendChild(div);
+          }
+        });
+      });
+  }
+
+  function startCobMovsListener(){
+    if (!currentUser) return;
+    if (unsubscribeCobMovs) { unsubscribeCobMovs(); unsubscribeCobMovs = null; }
+
+    unsubscribeCobMovs = db.collection(COL_COB_MOV)
+      .orderBy("creadoEn","desc")
+      .onSnapshot(snap=>{
+        const boxCob = $('cobMovsList');
+        const boxFletero = $('fleteroCobMovsList');
+        if (boxCob) boxCob.innerHTML = '';
+        if (boxFletero) boxFletero.innerHTML = '';
+
+        snap.forEach(doc=>{
+          const m = doc.data();
+          const fecha = m.creadoEn ? new Date(m.creadoEn).toLocaleString() : '';
+          const baseHTML = `
+            <div>
+              <strong>${m.clienteNombre || 'Sin cliente'}</strong>
+              <span class="cob-badge">${m.estado || 'Pendiente'}</span><br>
+              <small>Importe:</small> $${m.importe ? m.importe.toLocaleString('es-AR') : '0'}<br>
+              <small>Dirección:</small> ${m.direccion || '—'}<br>
+              ${m.direccion ? `<a href="${buildMapsLinkManual(m.direccion)}" target="_blank">Ver en Maps</a><br>` : ''}
+              <small>Creado:</small> ${fecha}
+              ${m.retirado && m.retiradoPor ? `<br><small>Retirado por:</small> ${m.retiradoPor}` : ''}
+            </div>
+          `;
+
+          if (boxCob) {
+            const item = document.createElement('div');
+            item.className = 'cob-list-item';
+            item.innerHTML = baseHTML;
+            boxCob.appendChild(item);
+          }
+
+          if (boxFletero) {
+            // el fletero solo mira los que no están retirados
+            if (m.estado === 'Retirado' || m.retirado) return;
+            const item = document.createElement('div');
+            item.className = 'cob-list-item';
+            item.innerHTML = baseHTML;
+
+            const actions = document.createElement('div');
+            actions.className = 'actions';
+
+            const btnRet = document.createElement('button');
+            btnRet.className = 'ghost';
+            btnRet.textContent = 'Retirado';
+            btnRet.onclick = () => markCobMovRetirado(doc.id);
+            actions.appendChild(btnRet);
+
+            item.appendChild(actions);
+            boxFletero.appendChild(item);
+          }
+        });
+      });
+  }
+
+  async function markCobMovRetirado(id){
+    if (!currentUser) { alert("Iniciá sesión"); return; }
+    if (currentRole !== 'fletero_cob' && currentRole !== 'cobranzas') {
+      alert("Solo fletero de cobranzas o cobranzas pueden marcar como retirado.");
+      return;
+    }
+    const nombre = getCurrentFleteroCobName();
+    try{
+      await db.collection(COL_COB_MOV).doc(id).update({
+        estado: "Retirado",
+        retirado: true,
+        retiradoPor: nombre,
+        retiradoUid: currentUser.uid,
+        retiradoEn: new Date().toISOString()
+      });
+    }catch(e){
+      alert("No se pudo marcar como retirado: " + e.message);
+    }
+  }
+
   // exponer
   window.saveRole = saveRole;
   window.chooseFletero = chooseFletero;
@@ -895,4 +1203,3 @@ Cliente 3, dirección..."></textarea>
 </script>
 </body>
 </html>
-
