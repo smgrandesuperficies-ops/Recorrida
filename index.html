@@ -725,23 +725,17 @@ Cliente 3, dirección..."></textarea>
   }
 
   async function reportarFaltante(id, movData){
-    if(!currentUser){ alert("Iniciá sesión"); return; }
-    const originalDesc = movData.descripcion || "";
-    const nuevoTexto = prompt(
-      "Editá el detalle y dejá solo lo que sale (lo que falta bórralo):",
-      originalDesc
-    );
-    if (nuevoTexto === null) return;
-    const nota = prompt("¿Querés dejar una nota del faltante? (opcional)","");
+  if(!currentUser){ alert("Iniciá sesión"); return; }
 
-    await db.collection(COL_MOV).doc(id).update({
-      descripcion: nuevoTexto,
-      estado: "Faltante",
-      obs: nota ? nota : (movData.obs || ""),
-      faltanteOriginal: originalDesc
-    });
-  }
+  const originalDesc = movData.descripcion || "";
+  const nota = prompt("Describí brevemente el faltante (opcional):","");
 
+  await db.collection(COL_MOV).doc(id).update({
+    estado: "Faltante",
+    obs: nota ? nota : (movData.obs || ""),
+    faltanteOriginal: originalDesc
+  });
+}
   async function deleteMov(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     if(!ADMIN_EMAILS.includes(currentUser.email)){
@@ -901,3 +895,4 @@ Cliente 3, dirección..."></textarea>
 </script>
 </body>
 </html>
+
