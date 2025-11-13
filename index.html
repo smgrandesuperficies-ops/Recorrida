@@ -55,11 +55,15 @@
     body.role-fletero   { --primary:#f97316; --bg:#fff1e8; }
     body.role-admin     { --primary:#0f172a; --bg:#e5e7eb; }
     body.role-logistica { --primary:#7c3aed; --bg:#ede9fe; }
+    body.role-cobranzas { --primary:#15803d; --bg:#ecfdf3; }
+    body.role-fletero_cob { --primary:#b91c1c; --bg:#fee2e2; }
 
     body.role-preparado header{background:linear-gradient(90deg,#16a34a,#15803d);}
     body.role-fletero header{background:linear-gradient(90deg,#f97316,#ea580c);}
     body.role-admin header{background:linear-gradient(90deg,#0f172a,#1f2937);}
     body.role-logistica header{background:linear-gradient(90deg,#7c3aed,#6d28d9);}
+    body.role-cobranzas header{background:linear-gradient(90deg,#15803d,#166534);}
+    body.role-fletero_cob header{background:linear-gradient(90deg,#b91c1c,#dc2626);}
 
     .admin-table{width:100%;border-collapse:collapse;margin-top:6px}
     .admin-table th,.admin-table td{border:1px solid #e2e8f0;padding:6px;font-size:13px;text-align:left}
@@ -75,7 +79,7 @@
     }
     .color-pill.selected{border-color:#0f172a}
 
-    /* tabla recorridas */
+    /* lista recorridas */
     .recorridas-list small{display:block;margin-top:2px}
   </style>
 </head>
@@ -101,7 +105,9 @@
   </label>
   <button id="btnLogin">Ingresar</button>
   <button id="btnRegister" class="ghost">Crear cuenta</button>
-  <small style="display:block;margin-top:6px">Encargados, Preparado, Fleteros, Logística y Admin se loguean acá.</small>
+  <small style="display:block;margin-top:6px">
+    Encargados, Preparado, Fleteros, Logística, Cobranzas, Fletero Cobranzas y Admin se loguean acá.
+  </small>
 </div>
 
 <!-- ELEGIR ROL / FLETERO COLOR -->
@@ -113,6 +119,10 @@
     <div class="col"><button onclick="saveRole('preparado')">Soy PREPARADO</button></div>
     <div class="col"><button onclick="chooseFletero()">Soy FLETERO</button></div>
     <div class="col"><button onclick="saveRole('logistica')">Soy LOGÍSTICA</button></div>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <div class="col"><button onclick="saveRole('cobranzas')">Soy COBRANZAS</button></div>
+    <div class="col"><button onclick="saveRole('fletero_cob')">Soy FLETERO COBRANZAS</button></div>
   </div>
 
   <div id="fleteroColorBox" style="display:none;margin-top:10px">
@@ -205,18 +215,58 @@
     <!-- LOGÍSTICA -->
     <div class="card" id="logisticaBox" style="display:none">
       <h2 style="margin:0 0 6px 0;font-size:15px">Logística – armar recorrida</h2>
-      <small>Ingresá la dirección de origen (planta, depósito, etc.) y abajo una dirección por línea.</small>
+      <small>Ingresá la dirección de origen y abajo una dirección por línea, en el orden que querés recorrer.</small>
       <label>Origen
         <input id="log-origen" type="text" placeholder="Ej: Planta, Calle 123, Ciudad" />
       </label>
-      <label>Direcciones a entregar (una por línea)
+      <label>Direcciones a entregar (una por línea, en orden)
         <textarea id="log-destinos" rows="5" placeholder="Cliente 1, dirección...
 Cliente 2, dirección...
 Cliente 3, dirección..."></textarea>
       </label>
-      <button id="btnCalcularRecorrida">Calcular recorrida</button>
+      <button id="btnCalcularRecorrida">Generar link de Google Maps</button>
       <div id="log-result" style="margin-top:10px;font-size:13px"></div>
       <div class="recorridas-list" id="log-historial" style="margin-top:12px"></div>
+    </div>
+
+    <!-- COBRANZAS -->
+    <div class="card" id="cobranzasBox" style="display:none">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Cobranzas</h2>
+      <h3 style="margin:4px 0;font-size:13px">Recorrida de cobranzas</h3>
+      <small>Ingresá origen y las direcciones de cobranza (una por línea). El orden lo definís vos.</small>
+      <label>Origen cobranzas
+        <input id="cob-origen" type="text" placeholder="Ej: Planta o punto de partida" />
+      </label>
+      <label>Direcciones (una por línea, en orden de visita)
+        <textarea id="cob-destinos" rows="4" placeholder="Cliente A, dirección...
+Cliente B, dirección..."></textarea>
+      </label>
+      <button id="btnCobCalcularRecorrida">Generar link de Maps (Cobranza)</button>
+      <div id="cob-recorrida-result" style="margin-top:8px;font-size:13px"></div>
+      <div id="cob-historial" class="recorridas-list" style="margin-top:10px"></div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid #e5e7eb">
+
+      <h3 style="margin:4px 0;font-size:13px">Clientes de cobranza</h3>
+      <label>Cliente
+        <input id="cob-cliente" type="text" placeholder="Nombre del cliente" />
+      </label>
+      <label>Dirección
+        <input id="cob-direccion" type="text" placeholder="Dirección completa" />
+      </label>
+      <label>Observaciones
+        <textarea id="cob-obs" rows="2" placeholder="Referencia de pago, ventana horaria, etc."></textarea>
+      </label>
+      <button id="btnCobAgregar">Agregar a la lista de cobranza</button>
+      <div id="cob-mov-list" style="margin-top:10px;font-size:13px"></div>
+      <small>El estado solo puede marcarlo el Fletero de cobranzas.</small>
+    </div>
+
+    <!-- FLETERO COBRANZAS -->
+    <div class="card" id="fleteroCobBox" style="display:none">
+      <h2 style="margin:0 0 6px 0;font-size:15px">Fletero de cobranzas</h2>
+      <small>Ves la lista de clientes de cobranza y marcás cuando el dinero fue retirado.</small>
+      <div id="cob-mov-list-fletero" style="margin-top:10px;font-size:13px"></div>
     </div>
 
     <!-- ADMIN -->
@@ -230,7 +280,7 @@ Cliente 3, dirección..."></textarea>
     </div>
   </div>
 
-  <!-- LISTA -->
+  <!-- LISTA MOVIMIENTOS PLANTA -->
   <div class="card" style="margin-top:12px">
     <h2 style="margin:0 0 6px 0;font-size:15px">Movimientos registrados</h2>
     <div class="filter-bar">
@@ -248,9 +298,6 @@ Cliente 3, dirección..."></textarea>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 <script>
-  // ← PONÉ TU API KEY VÁLIDA DE OPENROUTESERVICE ACA
-  const ORS_KEY = "PONE_TU_API_KEY_DE_ORS_ACA";
-
   const ADMIN_EMAILS = ["gerencia@sagradamadre.com"];
 
   const firebaseConfig = {
@@ -269,7 +316,9 @@ Cliente 3, dirección..."></textarea>
   const $ = id => document.getElementById(id);
   const COL_MOV = "movimientos";
   const COL_USERS = "usuarios";
-  const COL_RECORRIDAS = "recorridas";
+  const COL_RECORRIDAS = "recorridas";           // logística
+  const COL_COB_MOV = "cob_movimientos";         // clientes cobranza
+  const COL_COB_RECORRIDAS = "cob_recorridas";   // recorridas cobranza
 
   const FLETERO_COLORS = ["#f97316","#0ea5e9","#22c55e","#a855f7","#f43f5e","#eab308"];
   let selectedFleteroColor = null;
@@ -282,6 +331,8 @@ Cliente 3, dirección..."></textarea>
   let unsubscribeUsers = null;
   let unsubscribeAdminMov = null;
   let unsubscribeRecorridas = null;
+  let unsubscribeCobMov = null;
+  let unsubscribeCobRec = null;
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -316,11 +367,14 @@ Cliente 3, dirección..."></textarea>
       if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
       if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
       if (unsubscribeRecorridas) { unsubscribeRecorridas(); unsubscribeRecorridas = null; }
+      if (unsubscribeCobMov) { unsubscribeCobMov(); unsubscribeCobMov = null; }
+      if (unsubscribeCobRec) { unsubscribeCobRec(); unsubscribeCobRec = null; }
       return;
     }
     $('loginBox').style.display = 'none';
     $('userInfo').textContent = user.email;
 
+    // admin fijo
     if (ADMIN_EMAILS.includes(user.email)) {
       await db.collection(COL_USERS).doc(user.uid).set({
         email: user.email,
@@ -347,9 +401,13 @@ Cliente 3, dirección..."></textarea>
     if (currentRole === 'logistica') {
       startRecorridasListener();
     }
+    if (currentRole === 'cobranzas' || currentRole === 'fletero_cob') {
+      startCobMovListener();
+      if (currentRole === 'cobranzas') startCobRecorridasListener();
+    }
   });
 
-  // construir picker de colores fletero
+  // picker color fletero
   function buildFleteroColorPicker(){
     const box = $('fleteroColorOptions');
     box.innerHTML = '';
@@ -383,6 +441,7 @@ Cliente 3, dirección..."></textarea>
   async function saveRole(rol){
     if(!currentUser) return;
 
+    // admin fijo
     if (ADMIN_EMAILS.includes(currentUser.email)) {
       await db.collection(COL_USERS).doc(currentUser.uid).set({
         email: currentUser.email,
@@ -429,6 +488,10 @@ Cliente 3, dirección..."></textarea>
     showAppForRole(currentRole);
     startMovListener();
     if (rol === 'logistica') startRecorridasListener();
+    if (rol === 'cobranzas' || rol === 'fletero_cob') {
+      startCobMovListener();
+      if (rol === 'cobranzas') startCobRecorridasListener();
+    }
   }
 
   function showAppForRole(rol){
@@ -442,15 +505,19 @@ Cliente 3, dirección..."></textarea>
     if(rol === 'fletero')   document.body.classList.add('role-fletero');
     if(rol === 'admin')     document.body.classList.add('role-admin');
     if(rol === 'logistica') document.body.classList.add('role-logistica');
+    if(rol === 'cobranzas') document.body.classList.add('role-cobranzas');
+    if(rol === 'fletero_cob') document.body.classList.add('role-fletero_cob');
 
-    $('encargadoBox').style.display = (rol === 'encargado' || rol === 'admin') ? 'block' : 'none';
-    $('preparadoBox').style.display = (rol === 'preparado') ? 'block' : 'none';
-    $('fleteroBox').style.display   = (rol === 'fletero')   ? 'block' : 'none';
-    $('adminBox').style.display     = (rol === 'admin')     ? 'block' : 'none';
-    $('logisticaBox').style.display = (rol === 'logistica') ? 'block' : 'none';
+    $('encargadoBox').style.display   = (rol === 'encargado' || rol === 'admin') ? 'block' : 'none';
+    $('preparadoBox').style.display   = (rol === 'preparado') ? 'block' : 'none';
+    $('fleteroBox').style.display     = (rol === 'fletero')   ? 'block' : 'none';
+    $('adminBox').style.display       = (rol === 'admin')     ? 'block' : 'none';
+    $('logisticaBox').style.display   = (rol === 'logistica') ? 'block' : 'none';
+    $('cobranzasBox').style.display   = (rol === 'cobranzas') ? 'block' : 'none';
+    $('fleteroCobBox').style.display  = (rol === 'fletero_cob') ? 'block' : 'none';
   }
 
-  // CREAR MOVIMIENTO (sin cantidad)
+  // CREAR MOVIMIENTO PLANTA (sin cantidad)
   $('btnCreate').onclick = async () => {
     if(currentRole !== 'encargado' && currentRole !== 'admin'){
       alert("Solo un encargado o el admin puede crear movimientos");
@@ -484,7 +551,7 @@ Cliente 3, dirección..."></textarea>
     $('obs').value = '';
   };
 
-  // FILTROS
+  // FILTROS PLANTA
   $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
   $('filter-mp').onclick    = () => { setTypeFilter("Materia Prima"); startMovListener(); };
   $('filter-pt').onclick    = () => { setTypeFilter("Productos Terminados"); startMovListener(); };
@@ -502,7 +569,7 @@ Cliente 3, dirección..."></textarea>
     return currentUser ? currentUser.email : '';
   }
 
-  // LISTENER MOVIMIENTOS
+  // LISTENER MOVIMIENTOS PLANTA
   function startMovListener(){
     if (!currentUser || !currentRole) return;
     if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
@@ -626,7 +693,7 @@ Cliente 3, dirección..."></textarea>
       });
   }
 
-  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS
+  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS (SOLO PLANTA)
   function startAdminMovListener(){
     if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
     const box = $('adminMovList');
@@ -653,7 +720,7 @@ Cliente 3, dirección..."></textarea>
       });
   }
 
-  // LOGÍSTICA: escuchar recorridas guardadas
+  // LOGÍSTICA: escuchar recorridas
   function startRecorridasListener(){
     if (unsubscribeRecorridas) { unsubscribeRecorridas(); unsubscribeRecorridas = null; }
     unsubscribeRecorridas = db.collection(COL_RECORRIDAS)
@@ -669,7 +736,7 @@ Cliente 3, dirección..."></textarea>
           div.innerHTML = `
             <strong>${fecha}</strong>
             <small>Origen: ${r.origen}</small>
-            <small>Paradas: ${r.stops.length}</small>
+            <small>Paradas: ${(r.destinos && r.destinos.length) || 0}</small>
             ${r.googleLink ? `<small><a href="${r.googleLink}" target="_blank">Ver en Google Maps</a></small>` : ''}
           `;
           box.appendChild(div);
@@ -677,7 +744,83 @@ Cliente 3, dirección..."></textarea>
       });
   }
 
-  // ACCIONES MOVIMIENTOS
+  // COBRANZAS: escuchar movimientos (clientes)
+  function startCobMovListener(){
+    if (unsubscribeCobMov) { unsubscribeCobMov(); unsubscribeCobMov = null; }
+    unsubscribeCobMov = db.collection(COL_COB_MOV)
+      .orderBy("creadoEn","desc")
+      .onSnapshot(snap=>{
+        const boxCob = $('cob-mov-list');
+        const boxFle = $('cob-mov-list-fletero');
+        if (boxCob) boxCob.innerHTML = '';
+        if (boxFle) boxFle.innerHTML = '';
+        snap.forEach(doc=>{
+          const d = doc.data();
+          const id = doc.id;
+          const fecha = new Date(d.creadoEn).toLocaleString();
+          const estado = d.estado || 'Pendiente';
+
+          const linea = document.createElement('div');
+          linea.style.borderBottom = "1px solid #e5e7eb";
+          linea.style.padding = "4px 0";
+          linea.innerHTML = `
+            <strong>${d.cliente || '—'}</strong> — ${estado}<br>
+            <small>${d.direccion || '—'}</small><br>
+            ${d.obs ? `<small>Obs: ${d.obs}</small><br>` : ''}
+            <small>${fecha}</small>
+          `;
+
+          const linea2 = linea.cloneNode(true);
+
+          if (boxCob) boxCob.appendChild(linea);
+
+          if (boxFle) {
+            const cont = document.createElement('div');
+            cont.appendChild(linea2);
+            if (currentRole === 'fletero_cob' && estado !== 'Retirado') {
+              const btn = document.createElement('button');
+              btn.className = 'ghost';
+              btn.textContent = 'Retirado';
+              btn.onclick = () => marcarRetiradoCob(id);
+              cont.appendChild(btn);
+            } else if (estado === 'Retirado' && d.retiradoPor) {
+              const info = document.createElement('small');
+              info.textContent = `Retirado por ${d.retiradoPor} el ${new Date(d.retiradoEn).toLocaleString()}`;
+              cont.appendChild(document.createElement('br'));
+              cont.appendChild(info);
+            }
+            boxFle.appendChild(cont);
+          }
+        });
+      });
+  }
+
+  // COBRANZAS: escuchar recorridas
+  function startCobRecorridasListener(){
+    if (unsubscribeCobRec) { unsubscribeCobRec(); unsubscribeCobRec = null; }
+    unsubscribeCobRec = db.collection(COL_COB_RECORRIDAS)
+      .orderBy("creadoEn","desc")
+      .limit(20)
+      .onSnapshot(snap=>{
+        const box = $('cob-historial');
+        if (!box) return;
+        box.innerHTML = '<h3 style="margin:6px 0 4px 0;font-size:13px">Últimas recorridas de cobranzas</h3>';
+        snap.forEach(doc=>{
+          const r = doc.data();
+          const fecha = new Date(r.creadoEn).toLocaleString();
+          const div = document.createElement('div');
+          div.innerHTML = `
+            <strong>${fecha}</strong>
+            <small>Origen: ${r.origen}</small>
+            <small>Paradas: ${(r.destinos && r.destinos.length) || 0}</small>
+            ${r.googleLink ? `<small><a href="${r.googleLink}" target="_blank">Ver en Maps</a></small>` : ''}
+          `;
+          box.appendChild(div);
+        });
+      });
+  }
+
+  // ACCIONES MOVIMIENTOS PLANTA
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const finalName = getCurrentFleteroName();
@@ -724,18 +867,19 @@ Cliente 3, dirección..."></textarea>
     });
   }
 
+  // Reportar faltante (sin editar el pedido original)
   async function reportarFaltante(id, movData){
-  if(!currentUser){ alert("Iniciá sesión"); return; }
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    const originalDesc = movData.descripcion || "";
+    const nota = prompt("Describí brevemente el faltante (opcional):","");
 
-  const originalDesc = movData.descripcion || "";
-  const nota = prompt("Describí brevemente el faltante (opcional):","");
+    await db.collection(COL_MOV).doc(id).update({
+      estado: "Faltante",
+      obs: nota ? nota : (movData.obs || ""),
+      faltanteOriginal: originalDesc
+    });
+  }
 
-  await db.collection(COL_MOV).doc(id).update({
-    estado: "Faltante",
-    obs: nota ? nota : (movData.obs || ""),
-    faltanteOriginal: originalDesc
-  });
-}
   async function deleteMov(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     if(!ADMIN_EMAILS.includes(currentUser.email)){
@@ -784,114 +928,134 @@ Cliente 3, dirección..."></textarea>
     await db.collection(COL_USERS).doc(uid).delete();
   }
 
-  // ----------- LOGÍSTICA: calcular recorrida con ORS -----------
-
-  async function geocodeAddress(addr){
-    const url = `https://api.openrouteservice.org/geocode/search?api_key=${encodeURIComponent(ORS_KEY)}&text=${encodeURIComponent(addr)}&size=1`;
-    const resp = await fetch(url);
-    if(!resp.ok) throw new Error("No se pudo geocodificar: " + addr);
-    const data = await resp.json();
-    if(!data.features || !data.features.length) throw new Error("Dirección no encontrada: " + addr);
-    const [lon, lat] = data.features[0].geometry.coordinates;
-    return {lat, lon, label: addr};
-  }
-
-  async function distanceFromTo(origin, dest){
-    // origin = {lat,lon}, dest = {lat,lon}
-    const body = {
-      coordinates: [
-        [origin.lon, origin.lat],
-        [dest.lon, dest.lat]
-      ]
-    };
-    const resp = await fetch("https://api.openrouteservice.org/v2/directions/driving-car", {
-      method: "POST",
-      headers: {
-        "Authorization": ORS_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-    if(!resp.ok) throw new Error("No se pudo obtener distancia");
-    const data = await resp.json();
-    const summary = data.features[0].properties.summary;
-    return {
-      meters: summary.distance,
-      seconds: summary.duration
-    };
-  }
-
-  // botón logística
+  // ----------- LOGÍSTICA: generar link de Google Maps (sin API externa) -----------
   $('btnCalcularRecorrida').onclick = async () => {
     const origenTxt = $('log-origen').value.trim();
     const destinosTxt = $('log-destinos').value.trim();
     const out = $('log-result');
-    out.innerHTML = "Calculando...";
+    out.innerHTML = "Generando link...";
     if(!origenTxt || !destinosTxt){
       out.innerHTML = "Completá origen y al menos una dirección.";
       return;
     }
     const destinosArr = destinosTxt.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
-    try{
-      const origenGeo = await geocodeAddress(origenTxt);
-
-      // geocodifico todos los destinos en paralelo
-      const geos = await Promise.all(destinosArr.map(d=>geocodeAddress(d)));
-
-      // para cada destino obtengo distancia desde origen usando ORS
-      const destinosConDist = [];
-      for(let i=0;i<geos.length;i++){
-        const dist = await distanceFromTo(origenGeo, geos[i]);
-        destinosConDist.push({
-          ...geos[i],
-          original: destinosArr[i],
-          distanceMeters: dist.meters,
-          durationSecs: dist.seconds
-        });
-      }
-
-      // ordeno por distancia ascendente
-      destinosConDist.sort((a,b)=>a.distanceMeters - b.distanceMeters);
-
-      // armo link de google maps
-      const waypoints = destinosConDist.map(d=>`${d.lat},${d.lon}`).join('|');
-      const last = destinosConDist[destinosConDist.length-1];
-      const gmaps = `https://www.google.com/maps/dir/?api=1&origin=${origenGeo.lat},${origenGeo.lon}&destination=${last.lat},${last.lon}&waypoints=${encodeURIComponent(waypoints)}&travelmode=driving`;
-
-      // muestro
-      let html = `<strong>Recorrido sugerido (${destinosConDist.length} paradas):</strong><ol>`;
-      destinosConDist.forEach((d,idx)=>{
-        html += `<li>${d.original} — ${(d.distanceMeters/1000).toFixed(2)} km desde el origen</li>`;
-      });
-      html += `</ol><a href="${gmaps}" target="_blank">Abrir en Google Maps</a>`;
-      out.innerHTML = html;
-
-      // guardo en firestore
-      await db.collection(COL_RECORRIDAS).add({
-        creadoEn: new Date().toISOString(),
-        origen: origenTxt,
-        stops: destinosConDist.map(d=>({
-          direccion: d.original,
-          lat: d.lat,
-          lon: d.lon,
-          kmDesdeOrigen: +(d.distanceMeters/1000).toFixed(2)
-        })),
-        googleLink: gmaps,
-        creadoPor: currentUser ? currentUser.email : null
-      });
-
-    }catch(e){
-      console.error(e);
-      out.innerHTML = "No se pudo calcular la recorrida: " + e.message;
+    if (destinosArr.length === 0){
+      out.innerHTML = "Ingresá al menos una dirección.";
+      return;
     }
+
+    const originEnc = encodeURIComponent(origenTxt);
+    const destFinal = encodeURIComponent(destinosArr[destinosArr.length-1]);
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${originEnc}&destination=${destFinal}&travelmode=driving`;
+
+    if (destinosArr.length > 1){
+      const waypoints = destinosArr.slice(0, -1).map(d => d.trim()).join('|');
+      url += `&waypoints=${encodeURIComponent(waypoints)}`;
+    }
+
+    let html = `<strong>Recorrido (${destinosArr.length} paradas):</strong><ol>`;
+    destinosArr.forEach(d => {
+      html += `<li>${d}</li>`;
+    });
+    html += `</ol><a href="${url}" target="_blank">Abrir en Google Maps</a>`;
+    out.innerHTML = html;
+
+    await db.collection(COL_RECORRIDAS).add({
+      creadoEn: new Date().toISOString(),
+      origen: origenTxt,
+      destinos: destinosArr,
+      googleLink: url,
+      creadoPor: currentUser ? currentUser.email : null
+    });
   };
 
-  // exponer
+  // ----------- COBRANZAS: alta de cliente -----------
+  $('btnCobAgregar').onclick = async () => {
+    if (currentRole !== 'cobranzas' && currentRole !== 'admin'){
+      alert("Solo Cobranzas (o Admin) puede cargar clientes de cobranza.");
+      return;
+    }
+    const cliente = $('cob-cliente').value.trim();
+    const direccion = $('cob-direccion').value.trim();
+    const obs = $('cob-obs').value.trim();
+    if (!cliente || !direccion){
+      alert("Completá cliente y dirección.");
+      return;
+    }
+    await db.collection(COL_COB_MOV).add({
+      creadoEn: new Date().toISOString(),
+      cliente,
+      direccion,
+      obs,
+      estado: "Pendiente",
+      creadoPor: currentUser ? currentUser.email : null
+    });
+    $('cob-cliente').value = '';
+    $('cob-direccion').value = '';
+    $('cob-obs').value = '';
+  };
+
+  // ----------- COBRANZAS: marcar retirado -----------
+  async function marcarRetiradoCob(id){
+    if (currentRole !== 'fletero_cob'){
+      alert("Solo el Fletero de cobranzas puede marcar Retirado.");
+      return;
+    }
+    await db.collection(COL_COB_MOV).doc(id).update({
+      estado: "Retirado",
+      retiradoPor: currentUser ? currentUser.email : null,
+      retiradoEn: new Date().toISOString()
+    });
+  }
+
+  // ----------- COBRANZAS: generar link de Maps -----------
+  $('btnCobCalcularRecorrida').onclick = async () => {
+    const origenTxt = $('cob-origen').value.trim();
+    const destinosTxt = $('cob-destinos').value.trim();
+    const out = $('cob-recorrida-result');
+    out.innerHTML = "Generando link...";
+    if(!origenTxt || !destinosTxt){
+      out.innerHTML = "Completá origen y al menos una dirección.";
+      return;
+    }
+    const destinosArr = destinosTxt.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+    if (destinosArr.length === 0){
+      out.innerHTML = "Ingresá al menos una dirección.";
+      return;
+    }
+
+    const originEnc = encodeURIComponent(origenTxt);
+    const destFinal = encodeURIComponent(destinosArr[destinosArr.length-1]);
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${originEnc}&destination=${destFinal}&travelmode=driving`;
+
+    if (destinosArr.length > 1){
+      const waypoints = destinosArr.slice(0, -1).map(d => d.trim()).join('|');
+      url += `&waypoints=${encodeURIComponent(waypoints)}`;
+    }
+
+    let html = `<strong>Recorrido cobranzas (${destinosArr.length} paradas):</strong><ol>`;
+    destinosArr.forEach(d => {
+      html += `<li>${d}</li>`;
+    });
+    html += `</ol><a href="${url}" target="_blank">Abrir en Google Maps</a>`;
+    out.innerHTML = html;
+
+    await db.collection(COL_COB_RECORRIDAS).add({
+      creadoEn: new Date().toISOString(),
+      origen: origenTxt,
+      destinos: destinosArr,
+      googleLink: url,
+      creadoPor: currentUser ? currentUser.email : null
+    });
+  };
+
+  // Exponer funciones necesarias
   window.saveRole = saveRole;
   window.chooseFletero = chooseFletero;
   window.confirmFletero = confirmFletero;
   window.deleteUser = deleteUser;
   window.reportarFaltante = reportarFaltante;
+  window.marcarRetiradoCob = marcarRetiradoCob;
 </script>
 </body>
 </html>
