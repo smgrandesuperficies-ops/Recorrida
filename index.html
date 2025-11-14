@@ -32,7 +32,6 @@
     .estado-En\ viaje{background:#eff8ff;color:#175cd3}
     .estado-Entregado{background:#ecfdf3;color:#027a48}
     .estado-Faltante{background:#fee2e2;color:#b91c1c}
-    .estado-Retirado{background:#e0f2fe;color:#075985}
     small{color:var(--muted)}
     .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
     .delete-x{
@@ -46,11 +45,12 @@
     @media(min-width:900px){
       .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
       body{max-width:1100px;margin:0 auto;}
+      .full-width{grid-column:1 / -1;}
     }
     #app{display:none}
     #rolePicker{display:none}
 
-    /* colores por rol base */
+    /* colores por rol */
     body.role-encargado { --primary:#0f766e; --bg:#e0f2f1; }
     body.role-preparado { --primary:#16a34a; --bg:#e8f6ec; }
     body.role-fletero   { --primary:#f97316; --bg:#fff1e8; }
@@ -107,8 +107,7 @@
 <header>
   <h1>Movimientos de Planta — Sistema interno</h1>
 </header>
-
-<!-- GIF LOGIN -->
+<!-- GIF con fondo transparente -->
 <div id="loginGifContainer"
      style="display:flex;justify-content:center;align-items:center;width:100%;margin-top:35px;margin-bottom:10px;">
   <img src="20-PM-unscreen.gif" alt="Camión animado" 
@@ -131,7 +130,7 @@
   </small>
 </div>
 
-<!-- PICKER ROL -->
+<!-- ELEGIR ROL / FLETERO COLOR -->
 <div class="card" id="rolePicker">
   <h2 style="margin-top:0;font-size:15px">Seleccioná tu rol</h2>
   <p style="margin:0 0 6px 0">No encontramos tu rol en el sistema. Elegí uno:</p>
@@ -250,17 +249,17 @@ Cliente 3, dirección..."></textarea>
       <div class="recorridas-list" id="log-historial" style="margin-top:12px"></div>
     </div>
 
-    <!-- COBRANZAS -->
-    <div class="card" id="cobranzasBox" style="display:none">
+    <!-- COBRANZAS (full width) -->
+    <div class="card full-width" id="cobranzasBox" style="display:none">
       <h2 style="margin:0 0 6px 0;font-size:15px">Cobranzas</h2>
       <h3 style="margin:4px 0;font-size:13px">Recorrida de cobranzas</h3>
       <small>Ingresá origen y las direcciones de cobranza (una por línea). El orden lo definís vos.</small>
       <label>Origen cobranzas
         <input id="cob-origen" type="text" placeholder="Ej: Planta o punto de partida" />
       </label>
-      <label>Direcciones (una por línea, en orden de visita)
-        <textarea id="cob-destinos" rows="4" placeholder="Cliente A - Dirección...
-Cliente B - Dirección..."></textarea>
+      <label>Direcciones (una por línea, solo direcciones en orden de visita)
+        <textarea id="cob-destinos" rows="4" placeholder="Dirección Cliente A...
+Dirección Cliente B..."></textarea>
       </label>
       <button id="btnCobCalcularRecorrida">Generar link de Maps (Cobranza)</button>
       <div id="cob-recorrida-result" style="margin-top:8px;font-size:13px"></div>
@@ -299,10 +298,10 @@ Cliente B - Dirección..."></textarea>
       <small>Histórico (no se borra)</small>
       <div id="adminMovList" class="admin-mov-list"></div>
     </div>
-  </div> <!-- fin grid-2 -->
+  </div>
 
-  <!-- LISTA MOVIMIENTOS PLANTA (OCULTA PARA COBRANZAS) -->
-  <div class="card" id="plantaMovBox" style="margin-top:12px">
+  <!-- LISTA MOVIMIENTOS PLANTA -->
+  <div class="card" id="movimientosCard" style="margin-top:12px">
     <h2 style="margin:0 0 6px 0;font-size:15px">Movimientos registrados</h2>
     <div class="filter-bar">
       <button class="ghost filter-active" id="filter-todos">Todos</button>
@@ -312,7 +311,7 @@ Cliente B - Dirección..."></textarea>
     <div id="movList"></div>
     <small id="movCount"></small>
   </div>
-</div> <!-- fin #app -->
+</div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
@@ -355,7 +354,7 @@ Cliente B - Dirección..."></textarea>
   let unsubscribeCobMov = null;
   let unsubscribeCobRec = null;
 
-  /* ========== LOGIN ========== */
+  // LOGIN
   $('btnLogin').onclick = async () => {
     const email = $('loginEmail').value.trim();
     const pass = $('loginPass').value.trim();
@@ -364,6 +363,7 @@ Cliente B - Dirección..."></textarea>
     catch(e){ alert("Error al ingresar: " + e.message); }
   };
 
+  // REGISTRO
   $('btnRegister').onclick = async () => {
     const email = $('loginEmail').value.trim();
     const pass = $('loginPass').value.trim();
@@ -374,7 +374,7 @@ Cliente B - Dirección..."></textarea>
 
   $('btnLogout').onclick = () => auth.signOut();
 
-  /* ========== SESIÓN ========== */
+  // SESIÓN
   auth.onAuthStateChanged(async (user)=>{
     currentUser = user;
     currentUserData = null;
@@ -414,21 +414,23 @@ Cliente B - Dirección..."></textarea>
     currentRole = currentUserData.rol;
     showAppForRole(currentRole);
 
-    // listeners según rol
+    if (currentRole !== 'cobranzas' && currentRole !== 'fletero_cob') {
+      startMovListener();
+    }
+    if (currentRole === 'admin') {
+      startUsersListener();
+      startAdminMovListener();
+    }
+    if (currentRole === 'logistica') {
+      startRecorridasListener();
+    }
     if (currentRole === 'cobranzas' || currentRole === 'fletero_cob') {
       startCobMovListener();
       if (currentRole === 'cobranzas') startCobRecorridasListener();
-    } else {
-      startMovListener();
-      if (currentRole === 'logistica') startRecorridasListener();
-      if (currentRole === 'admin') {
-        startUsersListener();
-        startAdminMovListener();
-      }
     }
   });
 
-  /* ========== PICKER FLETERO COLOR ========== */
+  // picker color fletero
   function buildFleteroColorPicker(){
     const box = $('fleteroColorOptions');
     box.innerHTML = '';
@@ -459,7 +461,6 @@ Cliente B - Dirección..."></textarea>
     await saveRole('fletero');
   }
 
-  /* ========== GUARDAR ROL ========== */
   async function saveRole(rol){
     if(!currentUser) return;
 
@@ -508,17 +509,13 @@ Cliente B - Dirección..."></textarea>
     }
 
     showAppForRole(currentRole);
-
+    if (rol !== 'cobranzas' && rol !== 'fletero_cob') {
+      startMovListener();
+    }
+    if (rol === 'logistica') startRecorridasListener();
     if (rol === 'cobranzas' || rol === 'fletero_cob') {
       startCobMovListener();
       if (rol === 'cobranzas') startCobRecorridasListener();
-    } else {
-      startMovListener();
-      if (rol === 'logistica') startRecorridasListener();
-      if (rol === 'admin') {
-        startUsersListener();
-        startAdminMovListener();
-      }
     }
   }
 
@@ -528,13 +525,13 @@ Cliente B - Dirección..."></textarea>
     $('userRole').textContent = 'Rol: ' + rol;
 
     document.body.className = '';
-    if(rol === 'encargado') document.body.classList.add('role-encargado');
-    if(rol === 'preparado') document.body.classList.add('role-preparado');
-    if(rol === 'fletero')   document.body.classList.add('role-fletero');
-    if(rol === 'admin')     document.body.classList.add('role-admin');
-    if(rol === 'logistica') document.body.classList.add('role-logistica');
-    if(rol === 'cobranzas') document.body.classList.add('role-cobranzas');
-    if(rol === 'fletero_cob') document.body.classList.add('role-fletero_cob');
+    if(rol === 'encargado')    document.body.classList.add('role-encargado');
+    if(rol === 'preparado')    document.body.classList.add('role-preparado');
+    if(rol === 'fletero')      document.body.classList.add('role-fletero');
+    if(rol === 'admin')        document.body.classList.add('role-admin');
+    if(rol === 'logistica')    document.body.classList.add('role-logistica');
+    if(rol === 'cobranzas')    document.body.classList.add('role-cobranzas');
+    if(rol === 'fletero_cob')  document.body.classList.add('role-fletero_cob');
 
     $('encargadoBox').style.display   = (rol === 'encargado' || rol === 'admin') ? 'block' : 'none';
     $('preparadoBox').style.display   = (rol === 'preparado') ? 'block' : 'none';
@@ -544,20 +541,17 @@ Cliente B - Dirección..."></textarea>
     $('cobranzasBox').style.display   = (rol === 'cobranzas') ? 'block' : 'none';
     $('fleteroCobBox').style.display  = (rol === 'fletero_cob') ? 'block' : 'none';
 
-    // card de planta (movimientos) no visible para cobranzas
-    const plantaBox = $('plantaMovBox');
-    if (plantaBox) {
-      plantaBox.style.display = (rol === 'cobranzas' || rol === 'fletero_cob') ? 'none' : 'block';
-    }
-
-    // hacer que cobranzas ocupe las dos columnas
-    const cobBox = $('cobranzasBox');
-    if (cobBox) {
-      cobBox.style.gridColumn = (rol === 'cobranzas') ? '1 / -1' : '';
+    // mostrar/ocultar tarjeta de movimientos de planta
+    const movCard = $('movimientosCard');
+    if (movCard){
+      movCard.style.display =
+        (rol === 'encargado' || rol === 'preparado' || rol === 'fletero' || rol === 'admin' || rol === 'logistica')
+          ? 'block'
+          : 'none';
     }
   }
 
-  /* ========== CREAR MOVIMIENTO PLANTA ========== */
+  // CREAR MOVIMIENTO PLANTA (sin cantidad)
   $('btnCreate').onclick = async () => {
     if(currentRole !== 'encargado' && currentRole !== 'admin'){
       alert("Solo un encargado o el admin puede crear movimientos");
@@ -591,7 +585,7 @@ Cliente B - Dirección..."></textarea>
     $('obs').value = '';
   };
 
-  /* ========== FILTROS PLANTA ========== */
+  // FILTROS PLANTA
   $('filter-todos').onclick = () => { setTypeFilter("todos"); startMovListener(); };
   $('filter-mp').onclick    = () => { setTypeFilter("Materia Prima"); startMovListener(); };
   $('filter-pt').onclick    = () => { setTypeFilter("Productos Terminados"); startMovListener(); };
@@ -609,16 +603,17 @@ Cliente B - Dirección..."></textarea>
     return currentUser ? currentUser.email : '';
   }
 
-  /* ========== LISTENER MOVIMIENTOS PLANTA ========== */
+  // LISTENER MOVIMIENTOS PLANTA
   function startMovListener(){
     if (!currentUser || !currentRole) return;
-    if (currentRole === 'cobranzas' || currentRole === 'fletero_cob') return; // estos no ven planta
+    if (currentRole === 'cobranzas' || currentRole === 'fletero_cob') return; // no cargar para cobranzas
     if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
 
     unsubscribeMov = db.collection(COL_MOV)
       .orderBy("creadoEn","desc")
       .onSnapshot((snap)=>{
         const cont = $('movList');
+        if (!cont) return;
         cont.innerHTML = '';
         let count = 0;
         let lastDateLabel = null;
@@ -730,10 +725,14 @@ Cliente B - Dirección..."></textarea>
 
           cont.appendChild(div);
         });
-        $('movCount').textContent = count ? `${count} movimientos` : 'No hay movimientos aún';
+        const movCount = $('movCount');
+        if (movCount){
+          movCount.textContent = count ? `${count} movimientos` : 'No hay movimientos aún';
+        }
       });
   }
 
+  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS (SOLO PLANTA)
   function startAdminMovListener(){
     if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
     const box = $('adminMovList');
@@ -760,7 +759,7 @@ Cliente B - Dirección..."></textarea>
       });
   }
 
-  /* ========== LOGÍSTICA: HISTORIAL RECOrrIDAS ========== */
+  // LOGÍSTICA: escuchar recorridas
   function startRecorridasListener(){
     if (unsubscribeRecorridas) { unsubscribeRecorridas(); unsubscribeRecorridas = null; }
     unsubscribeRecorridas = db.collection(COL_RECORRIDAS)
@@ -774,6 +773,8 @@ Cliente B - Dirección..."></textarea>
           const r = doc.data();
           const fecha = new Date(r.creadoEn).toLocaleString();
           const div = document.createElement('div');
+          div.style.borderBottom = "1px solid #e5e7eb";
+          div.style.padding = "6px 0";
           div.innerHTML = `
             <strong>${fecha}</strong>
             <small>Origen: ${r.origen}</small>
@@ -785,7 +786,141 @@ Cliente B - Dirección..."></textarea>
       });
   }
 
-  /* ========== ACCIONES PLANTA ========== */
+  // COBRANZAS: escuchar movimientos (clientes)
+  function startCobMovListener(){
+    if (unsubscribeCobMov) { unsubscribeCobMov(); unsubscribeCobMov = null; }
+    unsubscribeCobMov = db.collection(COL_COB_MOV)
+      .orderBy("creadoEn","desc")
+      .onSnapshot(snap=>{
+        const boxCob = $('cob-mov-list');
+        const boxFle = $('cob-mov-list-fletero');
+        if (boxCob) boxCob.innerHTML = '';
+        if (boxFle) boxFle.innerHTML = '';
+
+        let lastDateCob = null;
+        let lastDateFle = null;
+
+        snap.forEach(doc=>{
+          const d = doc.data();
+          const id = doc.id;
+          const created = new Date(d.creadoEn);
+          const estado = d.estado || 'Pendiente';
+          const dateStr = created.toLocaleDateString();
+
+          // Panel Cobranzas
+          if (boxCob){
+            if (lastDateCob !== dateStr){
+              const title = document.createElement('div');
+              title.textContent = dateStr;
+              title.className = 'date-title';
+              boxCob.appendChild(title);
+              lastDateCob = dateStr;
+            }
+            const div = document.createElement('div');
+            div.className = 'movement';
+            div.innerHTML = `
+              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                <div>
+                  <strong>${d.cliente || '—'}</strong>
+                  <span class="badge" style="margin-left:4px">${estado}</span><br>
+                  <small>${d.direccion || '—'}</small><br>
+                  ${d.obs ? `<small>Obs: ${d.obs}</small><br>` : ''}
+                </div>
+                <small>${created.toLocaleTimeString()}</small>
+              </div>
+            `;
+            if (currentRole === 'cobranzas'){
+              const actions = document.createElement('div');
+              actions.className = 'actions';
+              const btnDel = document.createElement('button');
+              btnDel.className = 'ghost';
+              btnDel.textContent = 'Eliminar';
+              btnDel.onclick = () => deleteCobMovimiento(id);
+              actions.appendChild(btnDel);
+              div.appendChild(actions);
+            }
+            boxCob.appendChild(div);
+          }
+
+          // Panel Fletero de cobranzas
+          if (boxFle){
+            if (lastDateFle !== dateStr){
+              const title2 = document.createElement('div');
+              title2.textContent = dateStr;
+              title2.className = 'date-title';
+              boxFle.appendChild(title2);
+              lastDateFle = dateStr;
+            }
+            const divF = document.createElement('div');
+            divF.className = 'movement';
+            divF.innerHTML = `
+              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                <div>
+                  <strong>${d.cliente || '—'}</strong>
+                  <span class="badge" style="margin-left:4px">${estado}</span><br>
+                  <small>${d.direccion || '—'}</small><br>
+                  ${d.obs ? `<small>Obs: ${d.obs}</small><br>` : ''}
+                </div>
+                <small>${created.toLocaleTimeString()}</small>
+              </div>
+            `;
+            const actionsF = document.createElement('div');
+            actionsF.className = 'actions';
+
+            if (currentRole === 'fletero_cob' && estado !== 'Retirado'){
+              const btn = document.createElement('button');
+              btn.className = 'ghost';
+              btn.textContent = 'Retirado';
+              btn.onclick = () => marcarRetiradoCob(id);
+              actionsF.appendChild(btn);
+            } else if (estado === 'Retirado' && d.retiradoPor){
+              const info = document.createElement('small');
+              info.textContent = `Retirado por ${d.retiradoPor} el ${new Date(d.retiradoEn).toLocaleString()}`;
+              actionsF.appendChild(info);
+            }
+            divF.appendChild(actionsF);
+            boxFle.appendChild(divF);
+          }
+        });
+      });
+  }
+
+  // COBRANZAS: escuchar recorridas + eliminar
+  function startCobRecorridasListener(){
+    if (unsubscribeCobRec) { unsubscribeCobRec(); unsubscribeCobRec = null; }
+    unsubscribeCobRec = db.collection(COL_COB_RECORRIDAS)
+      .orderBy("creadoEn","desc")
+      .limit(20)
+      .onSnapshot(snap=>{
+        const box = $('cob-historial');
+        if (!box) return;
+        box.innerHTML = '<h3 style="margin:6px 0 4px 0;font-size:13px">Últimas recorridas de cobranzas</h3>';
+        snap.forEach(doc=>{
+          const r = doc.data();
+          const fecha = new Date(r.creadoEn).toLocaleString();
+          const div = document.createElement('div');
+          div.style.borderBottom = "1px solid #e5e7eb";
+          div.style.padding = "6px 0";
+          div.innerHTML = `
+            <strong>${fecha}</strong><br>
+            <small>Origen: ${r.origen || '—'}</small><br>
+            <small>Paradas: ${(r.destinos && r.destinos.length) || 0}</small><br>
+            ${r.googleLink ? `<small><a href="${r.googleLink}" target="_blank">Ver en Maps</a></small><br>` : ''}
+          `;
+          if (currentRole === 'cobranzas'){
+            const btn = document.createElement('button');
+            btn.className = 'ghost';
+            btn.style.marginTop = "4px";
+            btn.textContent = 'Eliminar recorrida';
+            btn.onclick = () => deleteCobRecorrida(doc.id);
+            div.appendChild(btn);
+          }
+          box.appendChild(div);
+        });
+      });
+  }
+
+  // ACCIONES MOVIMIENTOS PLANTA
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const finalName = getCurrentFleteroName();
@@ -832,6 +967,7 @@ Cliente B - Dirección..."></textarea>
     });
   }
 
+  // Reportar faltante (sin editar el pedido original)
   async function reportarFaltante(id, movData){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const originalDesc = movData.descripcion || "";
@@ -854,7 +990,7 @@ Cliente B - Dirección..."></textarea>
     await db.collection(COL_MOV).doc(id).delete();
   }
 
-  /* ========== LISTA USUARIOS (ADMIN) ========== */
+  // LISTA DE USUARIOS (SOLO ADMIN)
   function startUsersListener(){
     if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
     unsubscribeUsers = db.collection(COL_USERS)
@@ -892,7 +1028,7 @@ Cliente B - Dirección..."></textarea>
     await db.collection(COL_USERS).doc(uid).delete();
   }
 
-  /* ========== LOGÍSTICA: generar link de Google Maps (sin API externa) ========== */
+  // ----------- LOGÍSTICA: generar link de Google Maps (sin API externa) -----------
   $('btnCalcularRecorrida').onclick = async () => {
     const origenTxt = $('log-origen').value.trim();
     const destinosTxt = $('log-destinos').value.trim();
@@ -908,7 +1044,14 @@ Cliente B - Dirección..."></textarea>
       return;
     }
 
-    const url = buildMapsURL(origenTxt, destinosArr);
+    const originEnc = encodeURIComponent(origenTxt);
+    const destFinal = encodeURIComponent(destinosArr[destinosArr.length-1]);
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${originEnc}&destination=${destFinal}&travelmode=driving`;
+
+    if (destinosArr.length > 1){
+      const waypoints = destinosArr.slice(0, -1).map(d => d.trim()).join('|');
+      url += `&waypoints=${encodeURIComponent(waypoints)}`;
+    }
 
     let html = `<strong>Recorrido (${destinosArr.length} paradas):</strong><ol>`;
     destinosArr.forEach(d => {
@@ -926,10 +1069,10 @@ Cliente B - Dirección..."></textarea>
     });
   };
 
-  /* ========== COBRANZAS: alta de cliente ========== */
+  // ----------- COBRANZAS: alta de cliente -----------
   $('btnCobAgregar').onclick = async () => {
-    if (currentRole !== 'cobranzas' && currentRole !== 'admin'){
-      alert("Solo Cobranzas (o Admin) puede cargar clientes de cobranza.");
+    if (currentRole !== 'cobranzas'){
+      alert("Solo Cobranzas puede cargar clientes de cobranza.");
       return;
     }
     const cliente = $('cob-cliente').value.trim();
@@ -948,14 +1091,11 @@ Cliente B - Dirección..."></textarea>
       creadoPor: currentUser ? currentUser.email : null
     });
 
-    // Agregar automáticamente al textarea de direcciones de recorrida
-    const ta = $('cob-destinos');
-    let linea = `${cliente} - ${direccion}`;
-    if (obs) linea += ` (Obs: ${obs})`;
-    if (ta.value.trim()) {
-      ta.value += '\n' + linea;
-    } else {
-      ta.value = linea;
+    // actualizar textarea de direcciones (solo direcciones)
+    const destArea = $('cob-destinos');
+    if (destArea){
+      const current = destArea.value.trim();
+      destArea.value = current ? current + '\n' + direccion : direccion;
     }
 
     $('cob-cliente').value = '';
@@ -963,7 +1103,21 @@ Cliente B - Dirección..."></textarea>
     $('cob-obs').value = '';
   };
 
-  /* ========== COBRANZAS: marcar retirado ========== */
+  // ----------- COBRANZAS: eliminar cliente -----------
+  async function deleteCobMovimiento(id){
+    if (!currentUser){
+      alert("Iniciá sesión");
+      return;
+    }
+    if (currentRole !== 'cobranzas'){
+      alert("Solo Cobranzas puede eliminar estos registros.");
+      return;
+    }
+    if (!confirm("¿Eliminar este registro de cobranza?")) return;
+    await db.collection(COL_COB_MOV).doc(id).delete();
+  }
+
+  // ----------- COBRANZAS: marcar retirado -----------
   async function marcarRetiradoCob(id){
     if (currentRole !== 'fletero_cob'){
       alert("Solo el Fletero de cobranzas puede marcar Retirado.");
@@ -976,18 +1130,7 @@ Cliente B - Dirección..."></textarea>
     });
   }
 
-  /* ========== COBRANZAS: eliminar registro ========== */
-  async function deleteCobMov(id){
-    if(!currentUser){ alert("Iniciá sesión"); return; }
-    if(currentRole !== 'cobranzas' && !ADMIN_EMAILS.includes(currentUser.email)){
-      alert("Solo Cobranzas o Admin pueden eliminar registros de cobranza.");
-      return;
-    }
-    if(!confirm("¿Eliminar este registro de cobranza?")) return;
-    await db.collection(COL_COB_MOV).doc(id).delete();
-  }
-
-  /* ========== COBRANZAS: generar link de Maps ========== */
+  // ----------- COBRANZAS: generar link de Maps ----------- 
   $('btnCobCalcularRecorrida').onclick = async () => {
     const origenTxt = $('cob-origen').value.trim();
     const destinosTxt = $('cob-destinos').value.trim();
@@ -1003,13 +1146,20 @@ Cliente B - Dirección..."></textarea>
       return;
     }
 
-    const url = buildMapsURL(origenTxt, destinosArr);
+    const originEnc = encodeURIComponent(origenTxt);
+    const destFinal = encodeURIComponent(destinosArr[destinosArr.length-1]);
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${originEnc}&destination=${destFinal}&travelmode=driving`;
+
+    if (destinosArr.length > 1){
+      const waypoints = destinosArr.slice(0, -1).map(d => d.trim()).join('|');
+      url += `&waypoints=${encodeURIComponent(waypoints)}`;
+    }
 
     let html = `<strong>Recorrido cobranzas (${destinosArr.length} paradas):</strong><ol>`;
     destinosArr.forEach(d => {
       html += `<li>${d}</li>`;
     });
-    html += `</ol><a href="${url}" target="_blank">Abrir en Maps</a>`;
+    html += `</ol><a href="${url}" target="_blank">Abrir en Google Maps</a>`;
     out.innerHTML = html;
 
     await db.collection(COL_COB_RECORRIDAS).add({
@@ -1019,157 +1169,34 @@ Cliente B - Dirección..."></textarea>
       googleLink: url,
       creadoPor: currentUser ? currentUser.email : null
     });
+
+    // limpiar direcciones para que no se mezclen con futuras recorridas
+    $('cob-destinos').value = '';
   };
 
-  /* ========== COBRANZAS: escuchar movimientos (clientes) ========== */
-  function startCobMovListener(){
-    if (unsubscribeCobMov) { unsubscribeCobMov(); unsubscribeCobMov = null; }
-    unsubscribeCobMov = db.collection(COL_COB_MOV)
-      .orderBy("creadoEn","desc")
-      .onSnapshot(snap=>{
-        const boxCob = $('cob-mov-list');
-        const boxFle = $('cob-mov-list-fletero');
-        if (boxCob) boxCob.innerHTML = '';
-        if (boxFle) boxFle.innerHTML = '';
-
-        let lastDateCob = null;
-        let lastDateFle = null;
-
-        snap.forEach(doc=>{
-          const d = doc.data();
-          const id = doc.id;
-          const fechaObj = new Date(d.creadoEn);
-          const fechaStr = fechaObj.toLocaleDateString();
-          const estado = d.estado || 'Pendiente';
-          const estadoClass = 'estado-' + estado.replace(/ /g,'\\ ');
-
-          // Para COBRANZAS / ADMIN → listado principal
-          if (boxCob && (currentRole === 'cobranzas' || currentRole === 'admin')) {
-            if (fechaStr !== lastDateCob) {
-              const title = document.createElement('div');
-              title.textContent = fechaStr;
-              title.className = 'date-title';
-              boxCob.appendChild(title);
-              lastDateCob = fechaStr;
-            }
-
-            const div = document.createElement('div');
-            div.className = 'movement';
-            div.innerHTML = `
-              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
-                <div>
-                  <strong>${d.cliente || '—'}</strong>
-                  <div><small>Dirección:</small> ${d.direccion || '—'}</div>
-                  ${d.obs ? `<div><small>Obs:</small> ${d.obs}</div>` : ''}
-                  <span class="badge ${estadoClass}" style="margin-top:4px;display:inline-block">${estado}</span>
-                </div>
-                <small>${fechaObj.toLocaleTimeString()}</small>
-              </div>
-              ${d.estado === 'Retirado' && d.retiradoPor ? `
-                <div style="margin-top:4px">
-                  <small>Retirado por:</small> ${d.retiradoPor} el ${new Date(d.retiradoEn).toLocaleString()}
-                </div>` : ''}
-            `;
-
-            // botón eliminar para cobranzas / admin
-            if (currentRole === 'cobranzas' || (currentRole === 'admin' && ADMIN_EMAILS.includes(currentUser.email))) {
-              const x = document.createElement('button');
-              x.textContent = '×';
-              x.className = 'delete-x';
-              x.onclick = () => deleteCobMov(id);
-              div.appendChild(x);
-            }
-
-            boxCob.appendChild(div);
-          }
-
-          // Para FLETERO COBRANZAS
-          if (boxFle && currentRole === 'fletero_cob') {
-            if (fechaStr !== lastDateFle) {
-              const title = document.createElement('div');
-              title.textContent = fechaStr;
-              title.className = 'date-title';
-              boxFle.appendChild(title);
-              lastDateFle = fechaStr;
-            }
-
-            const divF = document.createElement('div');
-            divF.className = 'movement';
-            divF.innerHTML = `
-              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
-                <div>
-                  <strong>${d.cliente || '—'}</strong>
-                  <div><small>Dirección:</small> ${d.direccion || '—'}</div>
-                  ${d.obs ? `<div><small>Obs:</small> ${d.obs}</div>` : ''}
-                  <span class="badge ${estadoClass}" style="margin-top:4px;display:inline-block">${estado}</span>
-                </div>
-                <small>${fechaObj.toLocaleTimeString()}</small>
-              </div>
-              ${d.estado === 'Retirado' && d.retiradoPor ? `
-                <div style="margin-top:4px">
-                  <small>Retirado por:</small> ${d.retiradoPor} el ${new Date(d.retiradoEn).toLocaleString()}
-                </div>` : ''}
-            `;
-
-            if (estado !== 'Retirado') {
-              const btn = document.createElement('button');
-              btn.className = 'ghost';
-              btn.textContent = 'Retirado';
-              btn.onclick = () => marcarRetiradoCob(id);
-              divF.appendChild(btn);
-            }
-
-            boxFle.appendChild(divF);
-          }
-        });
-      });
-  }
-
-  /* ========== COBRANZAS: escuchar recorridas ========== */
-  function startCobRecorridasListener(){
-    if (unsubscribeCobRec) { unsubscribeCobRec(); unsubscribeCobRec = null; }
-    unsubscribeCobRec = db.collection(COL_COB_RECORRIDAS)
-      .orderBy("creadoEn","desc")
-      .limit(20)
-      .onSnapshot(snap=>{
-        const box = $('cob-historial');
-        if (!box) return;
-        box.innerHTML = '<h3 style="margin:6px 0 4px 0;font-size:13px">Últimas recorridas de cobranzas</h3>';
-        snap.forEach(doc=>{
-          const r = doc.data();
-          const fecha = new Date(r.creadoEn).toLocaleString();
-          const div = document.createElement('div');
-          div.innerHTML = `
-            <strong>${fecha}</strong>
-            <small>Origen: ${r.origen}</small>
-            <small>Paradas: ${(r.destinos && r.destinos.length) || 0}</small>
-            ${r.googleLink ? `<small><a href="${r.googleLink}" target="_blank">Ver en Maps</a></small>` : ''}
-          `;
-          box.appendChild(div);
-        });
-      });
-  }
-
-  /* ========== FUNCIÓN REUTILIZADA GOOGLE MAPS ========== */
-  function buildMapsURL(origen, destinos){
-    const originEnc = encodeURIComponent(origen);
-    const destFinal = encodeURIComponent(destinos[destinos.length-1]);
-    let url = `https://www.google.com/maps/dir/?api=1&origin=${originEnc}&destination=${destFinal}&travelmode=driving`;
-    if (destinos.length > 1){
-      const waypoints = destinos.slice(0, -1).map(d => d.trim()).join('|');
-      url += `&waypoints=${encodeURIComponent(waypoints)}`;
+  // ----------- COBRANZAS: eliminar recorrida -----------
+  async function deleteCobRecorrida(id){
+    if (!currentUser){
+      alert("Iniciá sesión");
+      return;
     }
-    return url;
+    if (currentRole !== 'cobranzas'){
+      alert("Solo Cobranzas puede eliminar recorridas de cobranzas.");
+      return;
+    }
+    if (!confirm("¿Eliminar esta recorrida de cobranzas?")) return;
+    await db.collection(COL_COB_RECORRIDAS).doc(id).delete();
   }
 
-  // Exponer
+  // Exponer funciones necesarias
   window.saveRole = saveRole;
   window.chooseFletero = chooseFletero;
   window.confirmFletero = confirmFletero;
   window.deleteUser = deleteUser;
   window.reportarFaltante = reportarFaltante;
   window.marcarRetiradoCob = marcarRetiradoCob;
-  window.deleteCobMov = deleteCobMov;
+  window.deleteCobRecorrida = deleteCobRecorrida;
+  window.deleteCobMovimiento = deleteCobMovimiento;
 </script>
 </body>
 </html>
