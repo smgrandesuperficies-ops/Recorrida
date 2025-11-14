@@ -32,6 +32,7 @@
     .estado-En\ viaje{background:#eff8ff;color:#175cd3}
     .estado-Entregado{background:#ecfdf3;color:#027a48}
     .estado-Faltante{background:#fee2e2;color:#b91c1c}
+    .estado-Retirado{background:#e0f2fe;color:#075985}
     small{color:var(--muted)}
     .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
     .delete-x{
@@ -258,8 +259,8 @@ Cliente 3, dirección..."></textarea>
         <input id="cob-origen" type="text" placeholder="Ej: Planta o punto de partida" />
       </label>
       <label>Direcciones (una por línea, en orden de visita)
-        <textarea id="cob-destinos" rows="4" placeholder="Cliente A, dirección...
-Cliente B, dirección..."></textarea>
+        <textarea id="cob-destinos" rows="4" placeholder="Cliente A - Dirección...
+Cliente B - Dirección..."></textarea>
       </label>
       <button id="btnCobCalcularRecorrida">Generar link de Maps (Cobranza)</button>
       <div id="cob-recorrida-result" style="margin-top:8px;font-size:13px"></div>
@@ -946,6 +947,17 @@ Cliente B, dirección..."></textarea>
       estado: "Pendiente",
       creadoPor: currentUser ? currentUser.email : null
     });
+
+    // Agregar automáticamente al textarea de direcciones de recorrida
+    const ta = $('cob-destinos');
+    let linea = `${cliente} - ${direccion}`;
+    if (obs) linea += ` (Obs: ${obs})`;
+    if (ta.value.trim()) {
+      ta.value += '\n' + linea;
+    } else {
+      ta.value = linea;
+    }
+
     $('cob-cliente').value = '';
     $('cob-direccion').value = '';
     $('cob-obs').value = '';
@@ -962,6 +974,17 @@ Cliente B, dirección..."></textarea>
       retiradoPor: currentUser ? currentUser.email : null,
       retiradoEn: new Date().toISOString()
     });
+  }
+
+  /* ========== COBRANZAS: eliminar registro ========== */
+  async function deleteCobMov(id){
+    if(!currentUser){ alert("Iniciá sesión"); return; }
+    if(currentRole !== 'cobranzas' && !ADMIN_EMAILS.includes(currentUser.email)){
+      alert("Solo Cobranzas o Admin pueden eliminar registros de cobranza.");
+      return;
+    }
+    if(!confirm("¿Eliminar este registro de cobranza?")) return;
+    await db.collection(COL_COB_MOV).doc(id).delete();
   }
 
   /* ========== COBRANZAS: generar link de Maps ========== */
@@ -1008,42 +1031,95 @@ Cliente B, dirección..."></textarea>
         const boxFle = $('cob-mov-list-fletero');
         if (boxCob) boxCob.innerHTML = '';
         if (boxFle) boxFle.innerHTML = '';
+
+        let lastDateCob = null;
+        let lastDateFle = null;
+
         snap.forEach(doc=>{
           const d = doc.data();
           const id = doc.id;
-          const fecha = new Date(d.creadoEn).toLocaleString();
+          const fechaObj = new Date(d.creadoEn);
+          const fechaStr = fechaObj.toLocaleDateString();
           const estado = d.estado || 'Pendiente';
+          const estadoClass = 'estado-' + estado.replace(/ /g,'\\ ');
 
-          const linea = document.createElement('div');
-          linea.style.borderBottom = "1px solid #e5e7eb";
-          linea.style.padding = "4px 0";
-          linea.innerHTML = `
-            <strong>${d.cliente || '—'}</strong> — ${estado}<br>
-            <small>${d.direccion || '—'}</small><br>
-            ${d.obs ? `<small>Obs: ${d.obs}</small><br>` : ''}
-            <small>${fecha}</small>
-          `;
+          // Para COBRANZAS / ADMIN → listado principal
+          if (boxCob && (currentRole === 'cobranzas' || currentRole === 'admin')) {
+            if (fechaStr !== lastDateCob) {
+              const title = document.createElement('div');
+              title.textContent = fechaStr;
+              title.className = 'date-title';
+              boxCob.appendChild(title);
+              lastDateCob = fechaStr;
+            }
 
-          const linea2 = linea.cloneNode(true);
+            const div = document.createElement('div');
+            div.className = 'movement';
+            div.innerHTML = `
+              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                <div>
+                  <strong>${d.cliente || '—'}</strong>
+                  <div><small>Dirección:</small> ${d.direccion || '—'}</div>
+                  ${d.obs ? `<div><small>Obs:</small> ${d.obs}</div>` : ''}
+                  <span class="badge ${estadoClass}" style="margin-top:4px;display:inline-block">${estado}</span>
+                </div>
+                <small>${fechaObj.toLocaleTimeString()}</small>
+              </div>
+              ${d.estado === 'Retirado' && d.retiradoPor ? `
+                <div style="margin-top:4px">
+                  <small>Retirado por:</small> ${d.retiradoPor} el ${new Date(d.retiradoEn).toLocaleString()}
+                </div>` : ''}
+            `;
 
-          if (boxCob && (currentRole === 'cobranzas' || currentRole === 'admin')) boxCob.appendChild(linea);
+            // botón eliminar para cobranzas / admin
+            if (currentRole === 'cobranzas' || (currentRole === 'admin' && ADMIN_EMAILS.includes(currentUser.email))) {
+              const x = document.createElement('button');
+              x.textContent = '×';
+              x.className = 'delete-x';
+              x.onclick = () => deleteCobMov(id);
+              div.appendChild(x);
+            }
 
+            boxCob.appendChild(div);
+          }
+
+          // Para FLETERO COBRANZAS
           if (boxFle && currentRole === 'fletero_cob') {
-            const cont = document.createElement('div');
-            cont.appendChild(linea2);
+            if (fechaStr !== lastDateFle) {
+              const title = document.createElement('div');
+              title.textContent = fechaStr;
+              title.className = 'date-title';
+              boxFle.appendChild(title);
+              lastDateFle = fechaStr;
+            }
+
+            const divF = document.createElement('div');
+            divF.className = 'movement';
+            divF.innerHTML = `
+              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                <div>
+                  <strong>${d.cliente || '—'}</strong>
+                  <div><small>Dirección:</small> ${d.direccion || '—'}</div>
+                  ${d.obs ? `<div><small>Obs:</small> ${d.obs}</div>` : ''}
+                  <span class="badge ${estadoClass}" style="margin-top:4px;display:inline-block">${estado}</span>
+                </div>
+                <small>${fechaObj.toLocaleTimeString()}</small>
+              </div>
+              ${d.estado === 'Retirado' && d.retiradoPor ? `
+                <div style="margin-top:4px">
+                  <small>Retirado por:</small> ${d.retiradoPor} el ${new Date(d.retiradoEn).toLocaleString()}
+                </div>` : ''}
+            `;
+
             if (estado !== 'Retirado') {
               const btn = document.createElement('button');
               btn.className = 'ghost';
               btn.textContent = 'Retirado';
               btn.onclick = () => marcarRetiradoCob(id);
-              cont.appendChild(btn);
-            } else if (estado === 'Retirado' && d.retiradoPor) {
-              const info = document.createElement('small');
-              info.textContent = `Retirado por ${d.retiradoPor} el ${new Date(d.retiradoEn).toLocaleString()}`;
-              cont.appendChild(document.createElement('br'));
-              cont.appendChild(info);
+              divF.appendChild(btn);
             }
-            boxFle.appendChild(cont);
+
+            boxFle.appendChild(divF);
           }
         });
       });
@@ -1093,6 +1169,7 @@ Cliente B, dirección..."></textarea>
   window.deleteUser = deleteUser;
   window.reportarFaltante = reportarFaltante;
   window.marcarRetiradoCob = marcarRetiradoCob;
+  window.deleteCobMov = deleteCobMov;
 </script>
 </body>
 </html>
