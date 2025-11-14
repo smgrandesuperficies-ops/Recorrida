@@ -56,6 +56,35 @@
     body.role-fletero   { --primary:#f97316; --bg:#fff1e8; }
     body.role-admin     { --primary:#0f172a; --bg:#e5e7eb; }
     body.role-logistica { --primary:#7c3aed; --bg:#ede9fe; }
+    /* Nuevos roles */
+body.role-cobranzas {
+  --primary:#ec4899;     /* Rosa fuerte */
+  --bg:#fdf2f8;          /* Fondo rosa claro */
+  font-family:"Trebuchet MS", system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+body.role-fletero_cob {
+  --primary:#b91c1c;     /* Rojo cobranzas */
+  --bg:#fee2e2;
+}
+
+/* Mostrar GIF distinto solo en Cobranzas */
+#gifCobranzas { display:none; }
+
+body.role-cobranzas #gifGeneral {
+  display:none !important;
+}
+
+body.role-cobranzas #gifCobranzas {
+  display:block !important;
+}
+
+/* Rol cobranzas en rosa */
+body.role-cobranzas #userRole{
+  color:#ec4899;
+  font-size:15px;
+  font-weight:700;
+}
 
     /* COBRANZAS (nuevo estilo) */
     body.role-cobranzas {
@@ -1399,5 +1428,6 @@ Dirección Cliente B..."></textarea>
 </script>
 </body>
 </html>
+
 
 
