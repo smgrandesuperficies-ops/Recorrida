@@ -107,11 +107,17 @@
 <header>
   <h1>Movimientos de Planta — Sistema interno</h1>
 </header>
-<!-- GIF con fondo transparente -->
+<!-- Imagen encabezado (general + cobranzas) -->
 <div id="loginGifContainer"
      style="display:flex;justify-content:center;align-items:center;width:100%;margin-top:35px;margin-bottom:10px;">
-  <img src="20-PM-unscreen.gif" alt="Camión animado" 
+
+  <!-- Imagen general (todos los roles menos cobranzas) -->
+  <img id="gifGeneral" src="20-PM-unscreen.gif" alt="Camión animado"
        style="width:280px;max-width:90%;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1));">
+
+  <!-- Imagen exclusiva para COBRANZAS -->
+  <img id="gifCobranzas" src="49-PM-unscreen.gif" alt="Cobranzas"
+       style="width:280px;max-width:90%;display:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1));">
 </div>
   
 <!-- LOGIN -->
@@ -1393,4 +1399,5 @@ Dirección Cliente B..."></textarea>
 </script>
 </body>
 </html>
+
 
