@@ -267,6 +267,19 @@ Dirección Cliente B..."></textarea>
 
       <hr style="margin:12px 0;border:none;border-top:1px solid #e5e7eb">
 
+      <h3 style="margin:4px 0;font-size:13px">Próximas recorridas</h3>
+      <small>Agenda fechas futuras de cobranzas.</small>
+      <label>Fecha
+        <input id="cob-prox-fecha" type="date" />
+      </label>
+      <label>Detalle
+        <textarea id="cob-prox-detalle" rows="2" placeholder="Ej: Zona norte, clientes grandes..."></textarea>
+      </label>
+      <button id="btnCobAgregarProx">Agregar próxima recorrida</button>
+      <div id="cob-prox-list" style="margin-top:10px;font-size:13px"></div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid #e5e7eb">
+
       <h3 style="margin:4px 0;font-size:13px">Clientes de cobranza</h3>
       <label>Cliente
         <input id="cob-cliente" type="text" placeholder="Nombre del cliente" />
@@ -339,6 +352,7 @@ Dirección Cliente B..."></textarea>
   const COL_RECORRIDAS = "recorridas";           // logística
   const COL_COB_MOV = "cob_movimientos";         // clientes cobranza
   const COL_COB_RECORRIDAS = "cob_recorridas";   // recorridas cobranza
+  const COL_COB_PROX = "cob_proximas";           // próximas recorridas
 
   const FLETERO_COLORS = ["#f97316","#0ea5e9","#22c55e","#a855f7","#f43f5e","#eab308"];
   let selectedFleteroColor = null;
@@ -353,6 +367,7 @@ Dirección Cliente B..."></textarea>
   let unsubscribeRecorridas = null;
   let unsubscribeCobMov = null;
   let unsubscribeCobRec = null;
+  let unsubscribeCobProx = null;
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -389,6 +404,7 @@ Dirección Cliente B..."></textarea>
       if (unsubscribeRecorridas) { unsubscribeRecorridas(); unsubscribeRecorridas = null; }
       if (unsubscribeCobMov) { unsubscribeCobMov(); unsubscribeCobMov = null; }
       if (unsubscribeCobRec) { unsubscribeCobRec(); unsubscribeCobRec = null; }
+      if (unsubscribeCobProx) { unsubscribeCobProx(); unsubscribeCobProx = null; }
       return;
     }
     $('loginBox').style.display = 'none';
@@ -426,7 +442,10 @@ Dirección Cliente B..."></textarea>
     }
     if (currentRole === 'cobranzas' || currentRole === 'fletero_cob') {
       startCobMovListener();
-      if (currentRole === 'cobranzas') startCobRecorridasListener();
+      if (currentRole === 'cobranzas') {
+        startCobRecorridasListener();
+        startCobProximasListener();
+      }
     }
   });
 
@@ -515,7 +534,10 @@ Dirección Cliente B..."></textarea>
     if (rol === 'logistica') startRecorridasListener();
     if (rol === 'cobranzas' || rol === 'fletero_cob') {
       startCobMovListener();
-      if (rol === 'cobranzas') startCobRecorridasListener();
+      if (rol === 'cobranzas') {
+        startCobRecorridasListener();
+        startCobProximasListener();
+      }
     }
   }
 
@@ -790,7 +812,7 @@ Dirección Cliente B..."></textarea>
   function startCobMovListener(){
     if (unsubscribeCobMov) { unsubscribeCobMov(); unsubscribeCobMov = null; }
     unsubscribeCobMov = db.collection(COL_COB_MOV)
-      .orderBy("creadoEn","desc")
+      .orderBy("creadoEn","asc")  // más viejo arriba, más nuevo abajo
       .onSnapshot(snap=>{
         const boxCob = $('cob-mov-list');
         const boxFle = $('cob-mov-list-fletero');
@@ -807,6 +829,17 @@ Dirección Cliente B..."></textarea>
           const estado = d.estado || 'Pendiente';
           const dateStr = created.toLocaleDateString();
 
+          // función para colorear por estado (pendiente rojo suave, retirado verde suave)
+          function applyEstadoColor(divBase){
+            if (estado === 'Pendiente'){
+              divBase.style.background = '#fee2e2';
+              divBase.style.borderColor = '#fecaca';
+            } else if (estado === 'Retirado'){
+              divBase.style.background = '#dcfce7';
+              divBase.style.borderColor = '#bbf7d0';
+            }
+          }
+
           // Panel Cobranzas
           if (boxCob){
             if (lastDateCob !== dateStr){
@@ -818,6 +851,17 @@ Dirección Cliente B..."></textarea>
             }
             const div = document.createElement('div');
             div.className = 'movement';
+            applyEstadoColor(div);
+
+            const retiroInfo = d.retiradoEn
+              ? `<small>Retirado: ${new Date(d.retiradoEn).toLocaleTimeString()}</small><br>`
+              : '';
+
+            const edicionInfo = d.ultimaEdicion
+              ? `<small>Última edición: ${new Date(d.ultimaEdicion.editadoEn).toLocaleString()} por ${d.ultimaEdicion.editadoPor}</small><br>
+                 <small>Cambios: ${d.ultimaEdicion.cambios}</small><br>`
+              : '';
+
             div.innerHTML = `
               <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
                 <div>
@@ -825,18 +869,30 @@ Dirección Cliente B..."></textarea>
                   <span class="badge" style="margin-left:4px">${estado}</span><br>
                   <small>${d.direccion || '—'}</small><br>
                   ${d.obs ? `<small>Obs: ${d.obs}</small><br>` : ''}
+                  ${retiroInfo}
+                  ${edicionInfo}
                 </div>
-                <small>${created.toLocaleTimeString()}</small>
+                <div style="text-align:right">
+                  <small>Registrado: ${created.toLocaleTimeString()}</small>
+                </div>
               </div>
             `;
+
             if (currentRole === 'cobranzas'){
               const actions = document.createElement('div');
               actions.className = 'actions';
+              const btnEdit = document.createElement('button');
+              btnEdit.className = 'ghost';
+              btnEdit.textContent = 'Editar';
+              btnEdit.onclick = () => editarCobMovimiento(id, d);
+              actions.appendChild(btnEdit);
+
               const btnDel = document.createElement('button');
               btnDel.className = 'ghost';
               btnDel.textContent = 'Eliminar';
               btnDel.onclick = () => deleteCobMovimiento(id);
               actions.appendChild(btnDel);
+
               div.appendChild(actions);
             }
             boxCob.appendChild(div);
@@ -853,6 +909,17 @@ Dirección Cliente B..."></textarea>
             }
             const divF = document.createElement('div');
             divF.className = 'movement';
+            applyEstadoColor(divF);
+
+            const retiroInfoF = d.retiradoEn
+              ? `<small>Retirado: ${new Date(d.retiradoEn).toLocaleTimeString()}</small><br>`
+              : '';
+
+            const edicionInfoF = d.ultimaEdicion
+              ? `<small>Última edición: ${new Date(d.ultimaEdicion.editadoEn).toLocaleString()} por ${d.ultimaEdicion.editadoPor}</small><br>
+                 <small>Cambios: ${d.ultimaEdicion.cambios}</small><br>`
+              : '';
+
             divF.innerHTML = `
               <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
                 <div>
@@ -860,8 +927,12 @@ Dirección Cliente B..."></textarea>
                   <span class="badge" style="margin-left:4px">${estado}</span><br>
                   <small>${d.direccion || '—'}</small><br>
                   ${d.obs ? `<small>Obs: ${d.obs}</small><br>` : ''}
+                  ${retiroInfoF}
+                  ${edicionInfoF}
                 </div>
-                <small>${created.toLocaleTimeString()}</small>
+                <div style="text-align:right">
+                  <small>Registrado: ${created.toLocaleTimeString()}</small>
+                </div>
               </div>
             `;
             const actionsF = document.createElement('div');
@@ -914,6 +985,40 @@ Dirección Cliente B..."></textarea>
             btn.textContent = 'Eliminar recorrida';
             btn.onclick = () => deleteCobRecorrida(doc.id);
             div.appendChild(btn);
+          }
+          box.appendChild(div);
+        });
+      });
+  }
+
+  // COBRANZAS: escuchar próximas recorridas
+  function startCobProximasListener(){
+    if (unsubscribeCobProx) { unsubscribeCobProx(); unsubscribeCobProx = null; }
+    unsubscribeCobProx = db.collection(COL_COB_PROX)
+      .orderBy("fecha","asc")
+      .onSnapshot(snap=>{
+        const box = $('cob-prox-list');
+        if (!box) return;
+        box.innerHTML = '';
+        snap.forEach(doc=>{
+          const d = doc.data();
+          const div = document.createElement('div');
+          div.className = 'movement';
+          div.style.background = '#f1f5f9';
+          div.style.borderColor = '#e2e8f0';
+          div.innerHTML = `
+            <strong>${d.fecha || ''}</strong><br>
+            <small>${d.detalle || ''}</small><br>
+          `;
+          if (currentRole === 'cobranzas'){
+            const actions = document.createElement('div');
+            actions.className = 'actions';
+            const btn = document.createElement('button');
+            btn.className = 'ghost';
+            btn.textContent = 'Eliminar';
+            btn.onclick = () => deleteCobProxima(doc.id);
+            actions.appendChild(btn);
+            div.appendChild(actions);
           }
           box.appendChild(div);
         });
@@ -1103,6 +1208,52 @@ Dirección Cliente B..."></textarea>
     $('cob-obs').value = '';
   };
 
+  // ----------- COBRANZAS: editar cliente -----------
+  async function editarCobMovimiento(id, d){
+    if (!currentUser){
+      alert("Iniciá sesión");
+      return;
+    }
+    if (currentRole !== 'cobranzas'){
+      alert("Solo Cobranzas puede editar estos registros.");
+      return;
+    }
+
+    const nombreEditor = prompt("Ingresá tu nombre para registrar la edición:");
+    if (!nombreEditor) return;
+
+    let nuevoCliente = prompt("Cliente", d.cliente || "") ;
+    if (nuevoCliente === null) nuevoCliente = d.cliente || "";
+
+    let nuevaDireccion = prompt("Dirección", d.direccion || "");
+    if (nuevaDireccion === null) nuevaDireccion = d.direccion || "";
+
+    let nuevaObs = prompt("Observaciones", d.obs || "");
+    if (nuevaObs === null) nuevaObs = d.obs || "";
+
+    const cambios = [];
+    if (nuevoCliente !== (d.cliente || "")){
+      cambios.push(`cliente: "${d.cliente || ''}" → "${nuevoCliente}"`);
+    }
+    if (nuevaDireccion !== (d.direccion || "")){
+      cambios.push(`dirección: "${d.direccion || ''}" → "${nuevaDireccion}"`);
+    }
+    if (nuevaObs !== (d.obs || "")){
+      cambios.push(`obs: "${d.obs || ''}" → "${nuevaObs}"`);
+    }
+
+    await db.collection(COL_COB_MOV).doc(id).update({
+      cliente: nuevoCliente,
+      direccion: nuevaDireccion,
+      obs: nuevaObs,
+      ultimaEdicion: {
+        editadoPor: nombreEditor,
+        editadoEn: new Date().toISOString(),
+        cambios: cambios.length ? cambios.join(' | ') : 'Sin cambios en campos'
+      }
+    });
+  }
+
   // ----------- COBRANZAS: eliminar cliente -----------
   async function deleteCobMovimiento(id){
     if (!currentUser){
@@ -1128,6 +1279,46 @@ Dirección Cliente B..."></textarea>
       retiradoPor: currentUser ? currentUser.email : null,
       retiradoEn: new Date().toISOString()
     });
+  }
+
+  // ----------- COBRANZAS: agregar próxima recorrida -----------
+  $('btnCobAgregarProx').onclick = async () => {
+    if (!currentUser){
+      alert("Iniciá sesión");
+      return;
+    }
+    if (currentRole !== 'cobranzas'){
+      alert("Solo Cobranzas puede cargar próximas recorridas.");
+      return;
+    }
+    const fecha = $('cob-prox-fecha').value;
+    const detalle = $('cob-prox-detalle').value.trim();
+    if (!fecha || !detalle){
+      alert("Completá fecha y detalle.");
+      return;
+    }
+    await db.collection(COL_COB_PROX).add({
+      fecha,
+      detalle,
+      creadoEn: new Date().toISOString(),
+      creadoPor: currentUser ? currentUser.email : null
+    });
+    $('cob-prox-fecha').value = '';
+    $('cob-prox-detalle').value = '';
+  };
+
+  // ----------- COBRANZAS: eliminar próxima recorrida -----------
+  async function deleteCobProxima(id){
+    if (!currentUser){
+      alert("Iniciá sesión");
+      return;
+    }
+    if (currentRole !== 'cobranzas'){
+      alert("Solo Cobranzas puede eliminar próximas recorridas.");
+      return;
+    }
+    if (!confirm("¿Eliminar esta próxima recorrida?")) return;
+    await db.collection(COL_COB_PROX).doc(id).delete();
   }
 
   // ----------- COBRANZAS: generar link de Maps ----------- 
@@ -1197,6 +1388,9 @@ Dirección Cliente B..."></textarea>
   window.marcarRetiradoCob = marcarRetiradoCob;
   window.deleteCobRecorrida = deleteCobRecorrida;
   window.deleteCobMovimiento = deleteCobMovimiento;
+  window.editarCobMovimiento = editarCobMovimiento;
+  window.deleteCobProxima = deleteCobProxima;
 </script>
 </body>
 </html>
+
