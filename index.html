@@ -50,6 +50,60 @@
     #app{display:none}
     #rolePicker{display:none}
 
+    /* LOGIN más profesional (solo diseño) */
+    #loginBox{
+      max-width:420px;
+      margin:0 auto;
+      margin-top:10px;
+      border-radius:16px;
+      padding:16px 18px;
+      position:relative;
+      overflow:hidden;
+    }
+    #loginBox::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:radial-gradient(circle at top left,rgba(37,99,235,0.16),transparent 55%);
+      opacity:0.9;
+      pointer-events:none;
+    }
+    #loginBox > *{
+      position:relative;
+      z-index:1;
+    }
+    #loginBox h2{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:16px;
+      margin-top:0;
+    }
+    .login-pill{
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:10px;
+      background:rgba(15,23,42,0.05);
+      color:#0f172a;
+      text-transform:uppercase;
+      letter-spacing:0.06em;
+      font-weight:600;
+    }
+    .login-subtitle{
+      margin:2px 0 6px 0;
+      font-size:12px;
+      color:#64748b;
+    }
+    #loginBox button{
+      width:100%;
+    }
+    #btnLogin{
+      margin-top:12px;
+    }
+    #btnRegister{
+      margin-top:6px;
+    }
+
     /* colores por rol */
     body.role-encargado { --primary:#0f766e; --bg:#e0f2f1; }
     body.role-preparado { --primary:#16a34a; --bg:#e8f6ec; }
@@ -57,34 +111,34 @@
     body.role-admin     { --primary:#0f172a; --bg:#e5e7eb; }
     body.role-logistica { --primary:#7c3aed; --bg:#ede9fe; }
     /* Nuevos roles */
-body.role-cobranzas {
-  --primary:#ec4899;     /* Rosa fuerte */
-  --bg:#fdf2f8;          /* Fondo rosa claro */
-  font-family:"Trebuchet MS", system-ui, -apple-system, Segoe UI, Roboto, Arial;
-}
+    body.role-cobranzas {
+      --primary:#ec4899;     /* Rosa fuerte */
+      --bg:#fdf2f8;          /* Fondo rosa claro */
+      font-family:"Trebuchet MS", system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
 
-body.role-fletero_cob {
-  --primary:#b91c1c;     /* Rojo cobranzas */
-  --bg:#fee2e2;
-}
+    body.role-fletero_cob {
+      --primary:#b91c1c;     /* Rojo cobranzas */
+      --bg:#fee2e2;
+    }
 
-/* Mostrar GIF distinto solo en Cobranzas */
-#gifCobranzas { display:none; }
+    /* Mostrar GIF distinto solo en Cobranzas */
+    #gifCobranzas { display:none; }
 
-body.role-cobranzas #gifGeneral {
-  display:none !important;
-}
+    body.role-cobranzas #gifGeneral {
+      display:none !important;
+    }
 
-body.role-cobranzas #gifCobranzas {
-  display:block !important;
-}
+    body.role-cobranzas #gifCobranzas {
+      display:block !important;
+    }
 
-/* Rol cobranzas en rosa */
-body.role-cobranzas #userRole{
-  color:#ec4899;
-  font-size:15px;
-  font-weight:700;
-}
+    /* Rol cobranzas en rosa */
+    body.role-cobranzas #userRole{
+      color:#ec4899;
+      font-size:15px;
+      font-weight:700;
+    }
 
     /* COBRANZAS (nuevo estilo) */
     body.role-cobranzas {
@@ -130,6 +184,77 @@ body.role-cobranzas #userRole{
 
     /* lista recorridas */
     .recorridas-list small{display:block;margin-top:2px}
+
+    /* === CHAT interno gerencia ↔ fleteros === */
+    .chat-card{
+      margin-top:10px;
+      border-radius:12px;
+      border:1px solid #e2e8f0;
+      padding:8px;
+      background:#f9fafb;
+    }
+    .chat-header{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      margin-bottom:6px;
+    }
+    .chat-header small{
+      font-size:11px;
+      color:#6b7280;
+    }
+    .chat-messages{
+      max-height:210px;
+      overflow-y:auto;
+      padding:6px;
+      background:white;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      font-size:12px;
+    }
+    .chat-message{
+      margin-bottom:6px;
+      display:flex;
+      flex-direction:column;
+      max-width:80%;
+    }
+    .chat-message.mine{
+      margin-left:auto;
+      align-items:flex-end;
+    }
+    .chat-message.other{
+      margin-right:auto;
+      align-items:flex-start;
+    }
+    .chat-bubble{
+      padding:6px 8px;
+      border-radius:12px;
+      border:1px solid #e5e7eb;
+      background:#eff6ff;
+    }
+    .chat-message.mine .chat-bubble{
+      background:#dcfce7;
+      border-color:#bbf7d0;
+    }
+    .chat-meta{
+      font-size:10px;
+      color:#9ca3af;
+      margin-top:2px;
+    }
+    .chat-input-row{
+      display:flex;
+      gap:6px;
+      margin-top:6px;
+    }
+    .chat-input-row input[type=text]{
+      flex:1;
+      margin-top:0;
+      background:#f9fafb;
+    }
+    .chat-input-row button{
+      margin-top:0;
+      white-space:nowrap;
+    }
   </style>
 </head>
 <body>
@@ -151,7 +276,13 @@ body.role-cobranzas #userRole{
   
 <!-- LOGIN -->
 <div class="card" id="loginBox">
-  <h2 style="margin-top:0;font-size:15px">Ingresar</h2>
+  <h2>
+    <span>Acceso al sistema interno</span>
+    <span class="login-pill">Sagrada Madre</span>
+  </h2>
+  <p class="login-subtitle">
+    Ingresá con tu correo corporativo para gestionar movimientos, recorridas y cobranzas.
+  </p>
   <label>Correo
     <input id="loginEmail" type="text" placeholder="encargado@empresa.com" />
   </label>
@@ -265,6 +396,20 @@ body.role-cobranzas #userRole{
         <input id="fleteroNombre" type="text" placeholder="Ej: Camión 3 - Luis" />
       </label>
       <small>Tomá el pedido y actualizá el estado.</small>
+
+      <!-- CHAT FLETERO ↔ GERENCIA -->
+      <hr style="margin:10px 0;border:none;border-top:1px solid #e5e7eb">
+      <div id="fleteroChatPanel" class="chat-card">
+        <div class="chat-header">
+          <strong>Mensajes con Gerencia</strong>
+          <small>Solo vos y gerencia pueden ver esta conversación.</small>
+        </div>
+        <div id="fleteroChatMessages" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <input id="fleteroChatInput" type="text" placeholder="Escribí un mensaje a gerencia..." />
+          <button id="fleteroChatSend">Enviar</button>
+        </div>
+      </div>
     </div>
 
     <!-- LOGÍSTICA -->
@@ -345,6 +490,20 @@ Dirección Cliente B..."></textarea>
       <h3 style="margin-top:14px;font-size:13px">Registro completo de movimientos</h3>
       <small>Histórico (no se borra)</small>
       <div id="adminMovList" class="admin-mov-list"></div>
+
+      <!-- CHAT ADMIN ↔ FLETEROS -->
+      <hr style="margin:12px 0;border:none;border-top:1px solid #e5e7eb">
+      <div id="adminChatPanel" class="chat-card">
+        <div class="chat-header">
+          <strong>Chat con fleteros</strong>
+          <small id="adminChatHeader">Seleccioná un fletero desde la tabla para iniciar el chat.</small>
+        </div>
+        <div id="adminChatMessages" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <input id="adminChatInput" type="text" placeholder="Escribí un mensaje para este fletero..." />
+          <button id="adminChatSend">Enviar</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -388,6 +547,7 @@ Dirección Cliente B..."></textarea>
   const COL_COB_MOV = "cob_movimientos";         // clientes cobranza
   const COL_COB_RECORRIDAS = "cob_recorridas";   // recorridas cobranza
   const COL_COB_PROX = "cob_proximas";           // próximas recorridas
+  const COL_CHATS = "chats";                     // NUEVO: chat gerencia ↔ fletero
 
   const FLETERO_COLORS = ["#f97316","#0ea5e9","#22c55e","#a855f7","#f43f5e","#eab308"];
   let selectedFleteroColor = null;
@@ -403,6 +563,9 @@ Dirección Cliente B..."></textarea>
   let unsubscribeCobMov = null;
   let unsubscribeCobRec = null;
   let unsubscribeCobProx = null;
+  let unsubscribeChat = null;                   // NUEVO: listener de chat
+  let currentChatFleteroUid = null;             // NUEVO: con qué fletero chatea gerencia
+  let currentChatFleteroEmail = null;           // NUEVO: email fletero para mostrar
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -424,22 +587,30 @@ Dirección Cliente B..."></textarea>
 
   $('btnLogout').onclick = () => auth.signOut();
 
+  function clearAllListeners(){
+    if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
+    if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
+    if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
+    if (unsubscribeRecorridas) { unsubscribeRecorridas(); unsubscribeRecorridas = null; }
+    if (unsubscribeCobMov) { unsubscribeCobMov(); unsubscribeCobMov = null; }
+    if (unsubscribeCobRec) { unsubscribeCobRec(); unsubscribeCobRec = null; }
+    if (unsubscribeCobProx) { unsubscribeCobProx(); unsubscribeCobProx = null; }
+    if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
+  }
+
   // SESIÓN
   auth.onAuthStateChanged(async (user)=>{
     currentUser = user;
     currentUserData = null;
+    currentChatFleteroUid = null;
+    currentChatFleteroEmail = null;
+    clearAllListeners();
+
     if(!user){
       document.body.className = '';
       $('loginBox').style.display = 'block';
       $('app').style.display = 'none';
       $('rolePicker').style.display = 'none';
-      if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
-      if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
-      if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
-      if (unsubscribeRecorridas) { unsubscribeRecorridas(); unsubscribeRecorridas = null; }
-      if (unsubscribeCobMov) { unsubscribeCobMov(); unsubscribeCobMov = null; }
-      if (unsubscribeCobRec) { unsubscribeCobRec(); unsubscribeCobRec = null; }
-      if (unsubscribeCobProx) { unsubscribeCobProx(); unsubscribeCobProx = null; }
       return;
     }
     $('loginBox').style.display = 'none';
@@ -481,6 +652,10 @@ Dirección Cliente B..."></textarea>
         startCobRecorridasListener();
         startCobProximasListener();
       }
+    }
+    // NUEVO: chat para fletero (se engancha solo con su propio uid)
+    if (currentRole === 'fletero') {
+      startChatListenerForFletero();
     }
   });
 
@@ -573,6 +748,9 @@ Dirección Cliente B..."></textarea>
         startCobRecorridasListener();
         startCobProximasListener();
       }
+    }
+    if (rol === 'fletero') {
+      startChatListenerForFletero();
     }
   }
 
@@ -1140,6 +1318,7 @@ Dirección Cliente B..."></textarea>
         let html = '<table class="admin-table"><tr><th>Email</th><th>Rol</th><th>Color</th><th>Acción</th></tr>';
         snap.forEach(doc=>{
           const u = doc.data();
+          const isFletero = (u.rol === 'fletero'); // NUEVO
           html += `
           <tr>
               <td>${u.email || '—'}</td>
@@ -1149,7 +1328,10 @@ Dirección Cliente B..."></textarea>
                 ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${u.color};border:1px solid #ccc;"></span>` 
                 : '—'}
               </td>
-              <td><button class="ghost" onclick="deleteUser('${doc.id}')">Eliminar</button></td>
+              <td>
+                <button class="ghost" onclick="deleteUser('${doc.id}')">Eliminar</button>
+                ${isFletero ? `<button class="ghost" style="margin-left:4px" onclick="openAdminChat('${doc.id}','${u.email || ''}')">Chat</button>` : ''}
+              </td>
           </tr>
           `;
         });
@@ -1414,6 +1596,151 @@ Dirección Cliente B..."></textarea>
     await db.collection(COL_COB_RECORRIDAS).doc(id).delete();
   }
 
+  /* ========== CHAT INTERNO GERENCIA ↔ FLETERO ========== */
+
+  function clearChatListener(){
+    if (unsubscribeChat){
+      unsubscribeChat();
+      unsubscribeChat = null;
+    }
+  }
+
+  // Render genérico de mensajes en un contenedor
+  function renderChatSnapshot(container, snap){
+    if (!container) return;
+    container.innerHTML = '';
+    snap.forEach(doc=>{
+      const m = doc.data();
+      const mine = currentUser && m.fromUid === currentUser.uid;
+      const div = document.createElement('div');
+      div.className = 'chat-message ' + (mine ? 'mine' : 'other');
+      const when = m.createdAt ? new Date(m.createdAt).toLocaleTimeString() : '';
+      const label = mine ? 'Vos' : (m.fromEmail === (ADMIN_EMAILS[0] || '') ? 'Gerencia' : (m.fromEmail || ''));
+      div.innerHTML = `
+        <div class="chat-bubble">${m.text || ''}</div>
+        <div class="chat-meta">${label} • ${when}</div>
+      `;
+      container.appendChild(div);
+    });
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // FLETERO: escucha su chat con gerencia (room = doc(uid_fletero))
+  function startChatListenerForFletero(){
+    if (!currentUser || currentRole !== 'fletero') return;
+    clearChatListener();
+    const uidRoom = currentUser.uid;
+    const box = $('fleteroChatMessages');
+    if (!box) return;
+
+    unsubscribeChat = db.collection(COL_CHATS)
+      .doc(uidRoom)
+      .collection('mensajes')
+      .orderBy('createdAt','asc')
+      .onSnapshot(snap=>{
+        renderChatSnapshot(box, snap);
+      });
+  }
+
+  // ADMIN: abre chat con un fletero (desde tabla de usuarios)
+  function openAdminChat(fleteroUid, fleteroEmail){
+    if (!currentUser || !ADMIN_EMAILS.includes(currentUser.email)){
+      alert("Solo gerencia puede usar este chat.");
+      return;
+    }
+    currentChatFleteroUid = fleteroUid;
+    currentChatFleteroEmail = fleteroEmail || '';
+    const header = $('adminChatHeader');
+    if (header){
+      header.textContent = `Chateando con: ${currentChatFleteroEmail || fleteroUid}`;
+    }
+
+    clearChatListener();
+    const box = $('adminChatMessages');
+    if (!box) return;
+
+    unsubscribeChat = db.collection(COL_CHATS)
+      .doc(fleteroUid)
+      .collection('mensajes')
+      .orderBy('createdAt','asc')
+      .onSnapshot(snap=>{
+        renderChatSnapshot(box, snap);
+      });
+  }
+
+  // Enviar mensaje desde admin → fletero
+  async function sendAdminChatMessage(){
+    if (!currentUser || !ADMIN_EMAILS.includes(currentUser.email)){
+      return;
+    }
+    if (!currentChatFleteroUid){
+      alert("Primero seleccioná un fletero desde la tabla de usuarios.");
+      return;
+    }
+    const input = $('adminChatInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    await db.collection(COL_CHATS)
+      .doc(currentChatFleteroUid)
+      .collection('mensajes')
+      .add({
+        text,
+        fromUid: currentUser.uid,
+        fromEmail: currentUser.email,
+        createdAt: new Date().toISOString()
+      });
+    input.value = '';
+  }
+
+  // Enviar mensaje desde fletero → gerencia
+  async function sendFleteroChatMessage(){
+    if (!currentUser || currentRole !== 'fletero') return;
+    const input = $('fleteroChatInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    await db.collection(COL_CHATS)
+      .doc(currentUser.uid)
+      .collection('mensajes')
+      .add({
+        text,
+        fromUid: currentUser.uid,
+        fromEmail: currentUser.email,
+        createdAt: new Date().toISOString()
+      });
+    input.value = '';
+  }
+
+  // Asignar eventos a los inputs/botones de chat
+  function attachChatHandlers(){
+    const btnAdmin = $('adminChatSend');
+    if (btnAdmin){
+      btnAdmin.onclick = sendAdminChatMessage;
+      const inp = $('adminChatInput');
+      if (inp){
+        inp.addEventListener('keypress', e=>{
+          if (e.key === 'Enter') sendAdminChatMessage();
+        });
+      }
+    }
+    const btnFletero = $('fleteroChatSend');
+    if (btnFletero){
+      btnFletero.onclick = sendFleteroChatMessage;
+      const inpF = $('fleteroChatInput');
+      if (inpF){
+        inpF.addEventListener('keypress', e=>{
+          if (e.key === 'Enter') sendFleteroChatMessage();
+        });
+      }
+    }
+  }
+
+  // ejecutamos una vez al cargar
+  attachChatHandlers();
+
   // Exponer funciones necesarias
   window.saveRole = saveRole;
   window.chooseFletero = chooseFletero;
@@ -1425,9 +1752,11 @@ Dirección Cliente B..."></textarea>
   window.deleteCobMovimiento = deleteCobMovimiento;
   window.editarCobMovimiento = editarCobMovimiento;
   window.deleteCobProxima = deleteCobProxima;
+  window.openAdminChat = openAdminChat; // NUEVO
 </script>
 </body>
 </html>
+
 
 
 
