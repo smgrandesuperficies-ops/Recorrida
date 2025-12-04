@@ -112,13 +112,13 @@
     body.role-logistica { --primary:#7c3aed; --bg:#ede9fe; }
     /* Nuevos roles */
     body.role-cobranzas {
-      --primary:#ec4899;     /* Rosa fuerte */
-      --bg:#fdf2f8;          /* Fondo rosa claro */
+      --primary:#ec4899;
+      --bg:#fdf2f8;
       font-family:"Trebuchet MS", system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
 
     body.role-fletero_cob {
-      --primary:#b91c1c;     /* Rojo cobranzas */
+      --primary:#b91c1c;
       --bg:#fee2e2;
     }
 
@@ -138,19 +138,6 @@
       color:#ec4899;
       font-size:15px;
       font-weight:700;
-    }
-
-    /* COBRANZAS (nuevo estilo) */
-    body.role-cobranzas {
-      --primary:#ec4899;       /* Rosa fuerte */
-      --bg:#fdf2f8;            /* Fondo rosa clarito */
-      font-family:"Trebuchet MS", system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    }
-
-    /* Fletero de cobranzas */
-    body.role-fletero_cob {
-      --primary:#b91c1c;       /* Rojo oscuro */
-      --bg:#fee2e2;            /* Fondo rojo claro */
     }
 
     /* headers por rol */
@@ -537,11 +524,11 @@ Dirección Cliente B..."></textarea>
   const COL_MOV = "movimientos";
   const COL_USERS = "usuarios";
   const COL_RECORRIDAS = "recorridas";           // logística
-  const COL_COB_MOV = "cob_movimientos";         // clientes cobranza
-  const COL_COB_RECORRIDAS = "cob_recorridas";   // recorridas cobranza
-  const COL_COB_PROX = "cob_proximas";           // próximas recorridas
+  const COL_COB_MOV = "cob_movimientos";         // clientes cobranzas
+  const COL_COB_RECORRIDAS = "cob_recorridas";   // recorridas cobranzas
+  const COL_COB_PROX = "cob_proximas";           // próximas cobranzas
   const COL_CHATS = "chats";                     // chat gerencia ↔ fletero
-  const COL_MOV_FLET_OBS = "mov_obs_fletero";    // NUEVO: observaciones internas de fletero
+  const COL_MOV_FLET_OBS = "mov_obs_fletero";    // observaciones internas fletero
 
   const FLETERO_COLORS = ["#f97316","#0ea5e9","#22c55e","#a855f7","#f43f5e","#eab308"];
   let selectedFleteroColor = null;
@@ -557,8 +544,8 @@ Dirección Cliente B..."></textarea>
   let unsubscribeCobMov = null;
   let unsubscribeCobRec = null;
   let unsubscribeCobProx = null;
-  let unsubscribeChat = null;                   // chat
-  let currentChatFleteroUid = null;             // con qué fletero chatea gerencia
+  let unsubscribeChat = null;
+  let currentChatFleteroUid = null;
   let currentChatFleteroEmail = null;
 
   // LOGIN
@@ -769,7 +756,6 @@ Dirección Cliente B..."></textarea>
     $('cobranzasBox').style.display   = (rol === 'cobranzas') ? 'block' : 'none';
     $('fleteroCobBox').style.display  = (rol === 'fletero_cob') ? 'block' : 'none';
 
-    // mostrar/ocultar tarjeta de movimientos de planta
     const movCard = $('movimientosCard');
     if (movCard){
       movCard.style.display =
@@ -779,7 +765,7 @@ Dirección Cliente B..."></textarea>
     }
   }
 
-  // CREAR MOVIMIENTO PLANTA (sin cantidad)
+  // CREAR MOVIMIENTO PLANTA
   $('btnCreate').onclick = async () => {
     if(currentRole !== 'encargado' && currentRole !== 'admin'){
       alert("Solo un encargado o el admin puede crear movimientos");
@@ -799,7 +785,6 @@ Dirección Cliente B..."></textarea>
       fleteroUid: null,
       horarioEstimado: null,
       creadoPorUid: currentUser ? currentUser.uid : null,
-      // campos de tiempos fletero aún vacíos
       fleteroAsignadoEn: null,
       enViajeEn: null,
       entregadoEn: null
@@ -835,10 +820,10 @@ Dirección Cliente B..."></textarea>
     return currentUser ? currentUser.email : '';
   }
 
-  // LISTENER MOVIMIENTOS PLANTA (con tiempos fletero + botón de observaciones)
+  // LISTENER MOVIMIENTOS PLANTA
   function startMovListener(){
     if (!currentUser || !currentRole) return;
-    if (currentRole === 'cobranzas' || currentRole === 'fletero_cob') return; // no cargar para cobranzas
+    if (currentRole === 'cobranzas' || currentRole === 'fletero_cob') return;
     if (unsubscribeMov) { unsubscribeMov(); unsubscribeMov = null; }
 
     unsubscribeMov = db.collection(COL_MOV)
@@ -881,7 +866,6 @@ Dirección Cliente B..."></textarea>
             ? descLines.map(l => `<div>► ${l}</div>`).join('')
             : '(sin descripción)';
 
-          // tiempos internos del recorrido
           let timesHTML = '';
           if (d.fleteroAsignadoEn || d.enViajeEn || d.entregadoEn){
             timesHTML += '<div style="margin-top:4px;font-size:11px;color:#64748b">';
@@ -963,7 +947,6 @@ Dirección Cliente B..."></textarea>
             btnEntregado.onclick = () => setEstadoFletero(doc.id, d, 'Entregado');
             actionsDiv.appendChild(btnEntregado);
 
-            // botón para observaciones internas de fletero (solo si es el fletero asignado)
             if (d.fleteroUid && currentUser && d.fleteroUid === currentUser.uid) {
               const btnObs = document.createElement('button');
               btnObs.className = 'ghost';
@@ -973,7 +956,7 @@ Dirección Cliente B..."></textarea>
             }
           }
 
-                   if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
+          if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
             const x = document.createElement('button');
             x.textContent = '×';
             x.className = 'delete-x';
@@ -981,8 +964,12 @@ Dirección Cliente B..."></textarea>
             div.appendChild(x);
           }
 
-          // NUEVO: fletero dueño ve sus propias observaciones
+          // Fletero dueño ve sus observaciones
           if (currentRole === 'fletero' && currentUser && d.fleteroUid === currentUser.uid) {
+            loadFleteroObsForMov(doc.id, div);
+          }
+          // Gerencia ve todas las observaciones
+          if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
             loadFleteroObsForMov(doc.id, div);
           }
 
@@ -995,8 +982,7 @@ Dirección Cliente B..."></textarea>
       });
   }
 
-
-  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS (SOLO PLANTA + obs de fletero)
+  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS
   function startAdminMovListener(){
     if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
     const box = $('adminMovList');
@@ -1020,7 +1006,7 @@ Dirección Cliente B..."></textarea>
           `;
           box.appendChild(div);
 
-          // cargar observaciones internas de fletero para este movimiento
+          // Observaciones internas de fletero también en panel admin
           loadFleteroObsForMov(doc.id, div);
         });
       });
@@ -1053,11 +1039,11 @@ Dirección Cliente B..."></textarea>
       });
   }
 
-  // COBRANZAS: escuchar movimientos (clientes)
+  // COBRANZAS: escuchar movimientos
   function startCobMovListener(){
     if (unsubscribeCobMov) { unsubscribeCobMov(); unsubscribeCobMov = null; }
     unsubscribeCobMov = db.collection(COL_COB_MOV)
-      .orderBy("creadoEn","asc")  // más viejo arriba, más nuevo abajo
+      .orderBy("creadoEn","asc")
       .onSnapshot(snap=>{
         const boxCob = $('cob-mov-list');
         const boxFle = $('cob-mov-list-fletero');
@@ -1084,7 +1070,6 @@ Dirección Cliente B..."></textarea>
             }
           }
 
-          // Panel Cobranzas
           if (boxCob){
             if (lastDateCob !== dateStr){
               const title = document.createElement('div');
@@ -1142,7 +1127,6 @@ Dirección Cliente B..."></textarea>
             boxCob.appendChild(div);
           }
 
-          // Panel Fletero de cobranzas
           if (boxFle){
             if (lastDateFle !== dateStr){
               const title2 = document.createElement('div');
@@ -1200,7 +1184,7 @@ Dirección Cliente B..."></textarea>
       });
   }
 
-  // COBRANZAS: escuchar recorridas + eliminar
+  // COBRANZAS: recorridas
   function startCobRecorridasListener(){
     if (unsubscribeCobRec) { unsubscribeCobRec(); unsubscribeCobRec = null; }
     unsubscribeCobRec = db.collection(COL_COB_RECORRIDAS)
@@ -1235,7 +1219,7 @@ Dirección Cliente B..."></textarea>
       });
   }
 
-  // COBRANZAS: escuchar próximas recorridas
+  // COBRANZAS: próximas recorridas
   function startCobProximasListener(){
     if (unsubscribeCobProx) { unsubscribeCobProx(); unsubscribeCobProx = null; }
     unsubscribeCobProx = db.collection(COL_COB_PROX)
@@ -1269,7 +1253,7 @@ Dirección Cliente B..."></textarea>
       });
   }
 
-  // ACCIONES MOVIMIENTOS PLANTA
+  // ACCIONES PLANTA
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const finalName = getCurrentFleteroName();
@@ -1323,7 +1307,6 @@ Dirección Cliente B..."></textarea>
     });
   }
 
-  // Reportar faltante (sin editar el pedido original)
   async function reportarFaltante(id, movData){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const originalDesc = movData.descripcion || "";
@@ -1346,7 +1329,7 @@ Dirección Cliente B..."></textarea>
     await db.collection(COL_MOV).doc(id).delete();
   }
 
-  // LISTA DE USUARIOS (SOLO ADMIN)
+  // LISTA USUARIOS
   function startUsersListener(){
     if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
     unsubscribeUsers = db.collection(COL_USERS)
@@ -1388,7 +1371,7 @@ Dirección Cliente B..."></textarea>
     await db.collection(COL_USERS).doc(uid).delete();
   }
 
-  // ----------- LOGÍSTICA: generar link de Google Maps (sin API externa) -----------
+  // LOGÍSTICA: link Maps
   $('btnCalcularRecorrida').onclick = async () => {
     const origenTxt = $('log-origen').value.trim();
     const destinosTxt = $('log-destinos').value.trim();
@@ -1429,7 +1412,7 @@ Dirección Cliente B..."></textarea>
     });
   };
 
-  // ----------- COBRANZAS: alta de cliente -----------
+  // COBRANZAS: alta cliente
   $('btnCobAgregar').onclick = async () => {
     if (currentRole !== 'cobranzas'){
       alert("Solo Cobranzas puede cargar clientes de cobranza.");
@@ -1462,7 +1445,7 @@ Dirección Cliente B..."></textarea>
     $('cob-obs').value = '';
   };
 
-  // ----------- COBRANZAS: editar cliente -----------
+  // COBRANZAS: editar
   async function editarCobMovimiento(id, d){
     if (!currentUser){
       alert("Iniciá sesión");
@@ -1508,7 +1491,7 @@ Dirección Cliente B..."></textarea>
     });
   }
 
-  // ----------- COBRANZAS: eliminar cliente -----------
+  // COBRANZAS: eliminar cliente
   async function deleteCobMovimiento(id){
     if (!currentUser){
       alert("Iniciá sesión");
@@ -1522,7 +1505,7 @@ Dirección Cliente B..."></textarea>
     await db.collection(COL_COB_MOV).doc(id).delete();
   }
 
-  // ----------- COBRANZAS: marcar retirado -----------
+  // COBRANZAS: marcar retirado
   async function marcarRetiradoCob(id){
     if (currentRole !== 'fletero_cob'){
       alert("Solo el Fletero de cobranzas puede marcar Retirado.");
@@ -1535,7 +1518,7 @@ Dirección Cliente B..."></textarea>
     });
   }
 
-  // ----------- COBRANZAS: agregar próxima recorrida -----------
+  // COBRANZAS: agregar próxima recorrida
   $('btnCobAgregarProx').onclick = async () => {
     if (!currentUser){
       alert("Iniciá sesión");
@@ -1561,7 +1544,7 @@ Dirección Cliente B..."></textarea>
     $('cob-prox-detalle').value = '';
   };
 
-  // ----------- COBRANZAS: eliminar próxima recorrida -----------
+  // COBRANZAS: eliminar próxima
   async function deleteCobProxima(id){
     if (!currentUser){
       alert("Iniciá sesión");
@@ -1573,9 +1556,9 @@ Dirección Cliente B..."></textarea>
     }
     if (!confirm("¿Eliminar esta próxima recorrida?")) return;
     await db.collection(COL_COB_PROX).doc(id).delete();
-  }
+  };
 
-  // ----------- COBRANZAS: generar link de Maps ----------- 
+  // COBRANZAS: link maps
   $('btnCobCalcularRecorrida').onclick = async () => {
     const origenTxt = $('cob-origen').value.trim();
     const destinosTxt = $('cob-destinos').value.trim();
@@ -1618,7 +1601,7 @@ Dirección Cliente B..."></textarea>
     $('cob-destinos').value = '';
   };
 
-  // ----------- COBRANZAS: eliminar recorrida -----------
+  // COBRANZAS: eliminar recorrida
   async function deleteCobRecorrida(id){
     if (!currentUser){
       alert("Iniciá sesión");
@@ -1632,7 +1615,7 @@ Dirección Cliente B..."></textarea>
     await db.collection(COL_COB_RECORRIDAS).doc(id).delete();
   }
 
-  /* ========== OBSERVACIONES INTERNAS DE FLETERO (solo gerencia las ve) ========== */
+  /* ========== OBSERVACIONES INTERNAS FLETERO ========== */
 
   async function addFleteroObs(movId, movData){
     if (!currentUser){
@@ -1659,57 +1642,58 @@ Dirección Cliente B..."></textarea>
     });
   }
 
- // Cargar observaciones internas de fletero
-// - Admin (gerencia): ve TODAS las obs del movimiento
-// - Fletero: solo ve SUS propias obs en los movimientos que tiene asignados
-function loadFleteroObsForMov(movId, container){
-  if (!currentUser) return;
+  // Cargar observaciones internas de fletero
+  function loadFleteroObsForMov(movId, container){
+    if (!currentUser) return;
 
-  let q = db.collection(COL_MOV_FLET_OBS)
-    .where('movId','==',movId)
-    .orderBy('createdAt','asc');
+    let q = db.collection(COL_MOV_FLET_OBS)
+      .where('movId','==',movId);
 
-  // gerencia ve todo
-  if (currentRole === 'admin') {
-    // q tal cual
-  } 
-  // fletero solo sus propias observaciones
-  else if (currentRole === 'fletero') {
-    q = q.where('fleteroUid','==',currentUser.uid);
-  } 
-  // otros roles no ven nada
-  else {
-    return;
+    if (currentRole === 'admin') {
+      // gerencia ve todo
+    } else if (currentRole === 'fletero') {
+      q = q.where('fleteroUid','==',currentUser.uid);
+    } else {
+      return;
+    }
+
+    q.get()
+      .then(snap=>{
+        if (snap.empty) return;
+
+        const obs = [];
+        snap.forEach(doc => obs.push(doc.data()));
+
+        obs.sort((a,b)=>{
+          const ta = a.createdAt || '';
+          const tb = b.createdAt || '';
+          return ta.localeCompare(tb);
+        });
+
+        const box = document.createElement('div');
+        box.style.marginTop = '4px';
+        box.style.fontSize = '11px';
+        box.style.color = '#4b5563';
+
+        let titulo = 'Obs. fletero (solo gerencia):';
+        if (currentRole === 'fletero') {
+          titulo = 'Tus observaciones internas:';
+        }
+
+        let html = `<div><small><strong>${titulo}</strong></small></div>`;
+        obs.forEach(o=>{
+          const when = o.createdAt ? new Date(o.createdAt).toLocaleString() : '';
+          const who  = o.fleteroEmail || '';
+          html += `<div>• ${when} – ${o.texto || ''}${currentRole === 'admin' ? ` <span style="opacity:.7">(${who})</span>` : ''}</div>`;
+        });
+
+        box.innerHTML = html;
+        container.appendChild(box);
+      })
+      .catch(err=>console.error('Error cargando obs fletero', err));
   }
 
-  q.get()
-    .then(snap=>{
-      if (snap.empty) return;
-
-      const box = document.createElement('div');
-      box.style.marginTop = '4px';
-      box.style.fontSize = '11px';
-      box.style.color = '#4b5563';
-
-      let titulo = 'Obs. fletero (solo gerencia):';
-      if (currentRole === 'fletero') {
-        titulo = 'Tus observaciones internas:';
-      }
-
-      let html = `<div><small><strong>${titulo}</strong></small></div>`;
-      snap.forEach(doc=>{
-        const o = doc.data();
-        const when = o.createdAt ? new Date(o.createdAt).toLocaleString() : '';
-        const who  = o.fleteroEmail || '';
-        html += `<div>• ${when} – ${o.texto || ''}${currentRole === 'admin' ? ` <span style="opacity:.7">(${who})</span>` : ''}</div>`;
-      });
-
-      box.innerHTML = html;
-      container.appendChild(box);
-    })
-    .catch(err=>console.error('Error cargando obs fletero', err));
-}
-  /* ========== CHAT INTERNO GERENCIA ↔ FLETERO ========== */
+  /* ========== CHAT GERENCIA ↔ FLETERO ========== */
 
   function clearChatListener(){
     if (unsubscribeChat){
@@ -1862,6 +1846,8 @@ function loadFleteroObsForMov(movId, container){
 </script>
 </body>
 </html>
+
+
 
 
 
