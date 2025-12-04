@@ -161,13 +161,6 @@
     body.role-cobranzas header{background:linear-gradient(90deg,#ec4899,#db2777);}
     body.role-fletero_cob header{background:linear-gradient(90deg,#b91c1c,#dc2626);}
 
-    /* Rol "cobranzas" en rosa más grande */
-    body.role-cobranzas #userRole{
-      color:#ec4899;
-      font-size:15px;
-      font-weight:700;
-    }
-
     .admin-table{width:100%;border-collapse:collapse;margin-top:6px}
     .admin-table th,.admin-table td{border:1px solid #e2e8f0;padding:6px;font-size:13px;text-align:left}
     .date-title{font-size:13px;font-weight:600;margin-top:10px;margin-bottom:4px;color:#0f172a}
@@ -547,7 +540,8 @@ Dirección Cliente B..."></textarea>
   const COL_COB_MOV = "cob_movimientos";         // clientes cobranza
   const COL_COB_RECORRIDAS = "cob_recorridas";   // recorridas cobranza
   const COL_COB_PROX = "cob_proximas";           // próximas recorridas
-  const COL_CHATS = "chats";                     // NUEVO: chat gerencia ↔ fletero
+  const COL_CHATS = "chats";                     // chat gerencia ↔ fletero
+  const COL_MOV_FLET_OBS = "mov_obs_fletero";    // NUEVO: observaciones internas de fletero
 
   const FLETERO_COLORS = ["#f97316","#0ea5e9","#22c55e","#a855f7","#f43f5e","#eab308"];
   let selectedFleteroColor = null;
@@ -563,9 +557,9 @@ Dirección Cliente B..."></textarea>
   let unsubscribeCobMov = null;
   let unsubscribeCobRec = null;
   let unsubscribeCobProx = null;
-  let unsubscribeChat = null;                   // NUEVO: listener de chat
-  let currentChatFleteroUid = null;             // NUEVO: con qué fletero chatea gerencia
-  let currentChatFleteroEmail = null;           // NUEVO: email fletero para mostrar
+  let unsubscribeChat = null;                   // chat
+  let currentChatFleteroUid = null;             // con qué fletero chatea gerencia
+  let currentChatFleteroEmail = null;
 
   // LOGIN
   $('btnLogin').onclick = async () => {
@@ -653,7 +647,6 @@ Dirección Cliente B..."></textarea>
         startCobProximasListener();
       }
     }
-    // NUEVO: chat para fletero (se engancha solo con su propio uid)
     if (currentRole === 'fletero') {
       startChatListenerForFletero();
     }
@@ -805,7 +798,11 @@ Dirección Cliente B..."></textarea>
       fletero: null,
       fleteroUid: null,
       horarioEstimado: null,
-      creadoPorUid: currentUser ? currentUser.uid : null
+      creadoPorUid: currentUser ? currentUser.uid : null,
+      // campos de tiempos fletero aún vacíos
+      fleteroAsignadoEn: null,
+      enViajeEn: null,
+      entregadoEn: null
     };
     if(!mov.encargado || !mov.descripcion){
       alert("Completá al menos encargado y descripción");
@@ -838,7 +835,7 @@ Dirección Cliente B..."></textarea>
     return currentUser ? currentUser.email : '';
   }
 
-  // LISTENER MOVIMIENTOS PLANTA
+  // LISTENER MOVIMIENTOS PLANTA (con tiempos fletero + botón de observaciones)
   function startMovListener(){
     if (!currentUser || !currentRole) return;
     if (currentRole === 'cobranzas' || currentRole === 'fletero_cob') return; // no cargar para cobranzas
@@ -884,6 +881,22 @@ Dirección Cliente B..."></textarea>
             ? descLines.map(l => `<div>► ${l}</div>`).join('')
             : '(sin descripción)';
 
+          // tiempos internos del recorrido
+          let timesHTML = '';
+          if (d.fleteroAsignadoEn || d.enViajeEn || d.entregadoEn){
+            timesHTML += '<div style="margin-top:4px;font-size:11px;color:#64748b">';
+            if (d.fleteroAsignadoEn){
+              timesHTML += `<div>Asignado al fletero: ${new Date(d.fleteroAsignadoEn).toLocaleString()}</div>`;
+            }
+            if (d.enViajeEn){
+              timesHTML += `<div>En viaje desde: ${new Date(d.enViajeEn).toLocaleString()}</div>`;
+            }
+            if (d.entregadoEn){
+              timesHTML += `<div>Entregado: ${new Date(d.entregadoEn).toLocaleString()}</div>`;
+            }
+            timesHTML += '</div>';
+          }
+
           div.innerHTML = `
             <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
               <div>
@@ -904,6 +917,7 @@ Dirección Cliente B..."></textarea>
             </div>
             ${d.horarioEstimado ? `<div style="margin-top:4px"><small>Horario estimado:</small> ${new Date(d.horarioEstimado).toLocaleString()}</div>` : ''}
             ${d.obs ? `<div style="margin-top:4px"><small>Obs:</small> ${d.obs}</div>` : ''}
+            ${timesHTML}
             <div class="actions" id="actions-${doc.id}"></div>
           `;
 
@@ -948,6 +962,15 @@ Dirección Cliente B..."></textarea>
             btnEntregado.textContent = 'Entregado';
             btnEntregado.onclick = () => setEstadoFletero(doc.id, d, 'Entregado');
             actionsDiv.appendChild(btnEntregado);
+
+            // botón para observaciones internas de fletero (solo si es el fletero asignado)
+            if (d.fleteroUid && currentUser && d.fleteroUid === currentUser.uid) {
+              const btnObs = document.createElement('button');
+              btnObs.className = 'ghost';
+              btnObs.textContent = 'Obs fletero';
+              btnObs.onclick = () => addFleteroObs(doc.id, d);
+              actionsDiv.appendChild(btnObs);
+            }
           }
 
           if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
@@ -967,7 +990,7 @@ Dirección Cliente B..."></textarea>
       });
   }
 
-  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS (SOLO PLANTA)
+  // ADMIN: LISTA COMPLETA DE MOVIMIENTOS (SOLO PLANTA + obs de fletero)
   function startAdminMovListener(){
     if (unsubscribeAdminMov) { unsubscribeAdminMov(); unsubscribeAdminMov = null; }
     const box = $('adminMovList');
@@ -990,6 +1013,9 @@ Dirección Cliente B..."></textarea>
             ${d.faltanteOriginal ? `<div><small>Original:</small> ${d.faltanteOriginal}</div>` : ''}
           `;
           box.appendChild(div);
+
+          // cargar observaciones internas de fletero para este movimiento
+          loadFleteroObsForMov(doc.id, div);
         });
       });
   }
@@ -1042,7 +1068,6 @@ Dirección Cliente B..."></textarea>
           const estado = d.estado || 'Pendiente';
           const dateStr = created.toLocaleDateString();
 
-          // función para colorear por estado (pendiente rojo suave, retirado verde suave)
           function applyEstadoColor(divBase){
             if (estado === 'Pendiente'){
               divBase.style.background = '#fee2e2';
@@ -1242,28 +1267,35 @@ Dirección Cliente B..."></textarea>
   async function assignFletero(id){
     if(!currentUser){ alert("Iniciá sesión"); return; }
     const finalName = getCurrentFleteroName();
+    const nowIso = new Date().toISOString();
     await db.collection(COL_MOV).doc(id).update({
       fletero: finalName,
-      fleteroUid: currentUser.uid
+      fleteroUid: currentUser.uid,
+      fleteroAsignadoEn: nowIso
     });
   }
 
   async function setEstadoFletero(id, movData, nuevoEstado){
     if(!currentUser){ alert("Iniciá sesión"); return; }
-    if (!movData.fleteroUid) {
+    if (!movData.fleleroUid && !movData.fleteroUid) {
       alert("Primero tomá el movimiento.");
       return;
     }
-    if (movData.fleteroUid !== currentUser.uid) {
+    if (movData.fleteroUid && movData.fleteroUid !== currentUser.uid) {
       alert("Ese movimiento lo tiene otro fletero.");
       return;
     }
     const myName = getCurrentFleteroName();
-    await db.collection(COL_MOV).doc(id).update({
+    const nowIso = new Date().toISOString();
+    const updates = {
       estado: nuevoEstado,
       fletero: myName,
       fleteroUid: currentUser.uid
-    });
+    };
+    if (nuevoEstado === 'En viaje') updates.enViajeEn = nowIso;
+    if (nuevoEstado === 'Entregado') updates.entregadoEn = nowIso;
+
+    await db.collection(COL_MOV).doc(id).update(updates);
   }
 
   async function setEstadoPreparado(id){
@@ -1318,7 +1350,7 @@ Dirección Cliente B..."></textarea>
         let html = '<table class="admin-table"><tr><th>Email</th><th>Rol</th><th>Color</th><th>Acción</th></tr>';
         snap.forEach(doc=>{
           const u = doc.data();
-          const isFletero = (u.rol === 'fletero'); // NUEVO
+          const isFletero = (u.rol === 'fletero');
           html += `
           <tr>
               <td>${u.email || '—'}</td>
@@ -1413,7 +1445,6 @@ Dirección Cliente B..."></textarea>
       creadoPor: currentUser ? currentUser.email : null
     });
 
-    // actualizar textarea de direcciones (solo direcciones)
     const destArea = $('cob-destinos');
     if (destArea){
       const current = destArea.value.trim();
@@ -1578,7 +1609,6 @@ Dirección Cliente B..."></textarea>
       creadoPor: currentUser ? currentUser.email : null
     });
 
-    // limpiar direcciones para que no se mezclen con futuras recorridas
     $('cob-destinos').value = '';
   };
 
@@ -1596,6 +1626,58 @@ Dirección Cliente B..."></textarea>
     await db.collection(COL_COB_RECORRIDAS).doc(id).delete();
   }
 
+  /* ========== OBSERVACIONES INTERNAS DE FLETERO (solo gerencia las ve) ========== */
+
+  async function addFleteroObs(movId, movData){
+    if (!currentUser){
+      alert("Iniciá sesión");
+      return;
+    }
+    if (currentRole !== 'fletero'){
+      alert("Solo fleteros pueden cargar estas observaciones internas.");
+      return;
+    }
+    if (!movData.fleteroUid || movData.fleteroUid !== currentUser.uid){
+      alert("Solo el fletero asignado al movimiento puede agregar observaciones.");
+      return;
+    }
+    const texto = prompt("Observación interna de fletero (solo la ve gerencia):","");
+    if (!texto || !texto.trim()) return;
+
+    await db.collection(COL_MOV_FLET_OBS).add({
+      movId,
+      texto: texto.trim(),
+      createdAt: new Date().toISOString(),
+      fleteroUid: currentUser.uid,
+      fleteroEmail: currentUser.email || null
+    });
+  }
+
+  function loadFleteroObsForMov(movId, container){
+    if (!currentUser || currentRole !== 'admin') return; // solo gerencia
+    db.collection(COL_MOV_FLET_OBS)
+      .where('movId','==',movId)
+      .orderBy('createdAt','asc')
+      .get()
+      .then(snap=>{
+        if (snap.empty) return;
+        const box = document.createElement('div');
+        box.style.marginTop = '4px';
+        box.style.fontSize = '11px';
+        box.style.color = '#4b5563';
+        let html = '<div><small><strong>Obs. fletero (solo gerencia):</strong></small></div>';
+        snap.forEach(doc=>{
+          const o = doc.data();
+          const when = o.createdAt ? new Date(o.createdAt).toLocaleString() : '';
+          const who = o.fleteroEmail || '';
+          html += `<div>• ${when} – ${o.texto || ''} <span style="opacity:.7">(${who})</span></div>`;
+        });
+        box.innerHTML = html;
+        container.appendChild(box);
+      })
+      .catch(err=>console.error('Error cargando obs fletero', err));
+  }
+
   /* ========== CHAT INTERNO GERENCIA ↔ FLETERO ========== */
 
   function clearChatListener(){
@@ -1605,7 +1687,6 @@ Dirección Cliente B..."></textarea>
     }
   }
 
-  // Render genérico de mensajes en un contenedor
   function renderChatSnapshot(container, snap){
     if (!container) return;
     container.innerHTML = '';
@@ -1625,7 +1706,6 @@ Dirección Cliente B..."></textarea>
     container.scrollTop = container.scrollHeight;
   }
 
-  // FLETERO: escucha su chat con gerencia (room = doc(uid_fletero))
   function startChatListenerForFletero(){
     if (!currentUser || currentRole !== 'fletero') return;
     clearChatListener();
@@ -1642,7 +1722,6 @@ Dirección Cliente B..."></textarea>
       });
   }
 
-  // ADMIN: abre chat con un fletero (desde tabla de usuarios)
   function openAdminChat(fleteroUid, fleteroEmail){
     if (!currentUser || !ADMIN_EMAILS.includes(currentUser.email)){
       alert("Solo gerencia puede usar este chat.");
@@ -1668,7 +1747,6 @@ Dirección Cliente B..."></textarea>
       });
   }
 
-  // Enviar mensaje desde admin → fletero
   async function sendAdminChatMessage(){
     if (!currentUser || !ADMIN_EMAILS.includes(currentUser.email)){
       return;
@@ -1694,7 +1772,6 @@ Dirección Cliente B..."></textarea>
     input.value = '';
   }
 
-  // Enviar mensaje desde fletero → gerencia
   async function sendFleteroChatMessage(){
     if (!currentUser || currentRole !== 'fletero') return;
     const input = $('fleteroChatInput');
@@ -1714,7 +1791,6 @@ Dirección Cliente B..."></textarea>
     input.value = '';
   }
 
-  // Asignar eventos a los inputs/botones de chat
   function attachChatHandlers(){
     const btnAdmin = $('adminChatSend');
     if (btnAdmin){
@@ -1738,7 +1814,6 @@ Dirección Cliente B..."></textarea>
     }
   }
 
-  // ejecutamos una vez al cargar
   attachChatHandlers();
 
   // Exponer funciones necesarias
@@ -1752,10 +1827,12 @@ Dirección Cliente B..."></textarea>
   window.deleteCobMovimiento = deleteCobMovimiento;
   window.editarCobMovimiento = editarCobMovimiento;
   window.deleteCobProxima = deleteCobProxima;
-  window.openAdminChat = openAdminChat; // NUEVO
+  window.openAdminChat = openAdminChat;
 </script>
 </body>
 </html>
+
+
 
 
 
