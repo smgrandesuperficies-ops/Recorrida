@@ -973,12 +973,17 @@ Dirección Cliente B..."></textarea>
             }
           }
 
-          if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
+                   if (currentRole === 'admin' && currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
             const x = document.createElement('button');
             x.textContent = '×';
             x.className = 'delete-x';
             x.onclick = () => deleteMov(doc.id);
             div.appendChild(x);
+          }
+
+          // NUEVO: fletero dueño ve sus propias observaciones
+          if (currentRole === 'fletero' && currentUser && d.fleteroUid === currentUser.uid) {
+            loadFleteroObsForMov(doc.id, div);
           }
 
           cont.appendChild(div);
@@ -989,6 +994,7 @@ Dirección Cliente B..."></textarea>
         }
       });
   }
+
 
   // ADMIN: LISTA COMPLETA DE MOVIMIENTOS (SOLO PLANTA + obs de fletero)
   function startAdminMovListener(){
@@ -1653,31 +1659,56 @@ Dirección Cliente B..."></textarea>
     });
   }
 
-  function loadFleteroObsForMov(movId, container){
-    if (!currentUser || currentRole !== 'admin') return; // solo gerencia
-    db.collection(COL_MOV_FLET_OBS)
-      .where('movId','==',movId)
-      .orderBy('createdAt','asc')
-      .get()
-      .then(snap=>{
-        if (snap.empty) return;
-        const box = document.createElement('div');
-        box.style.marginTop = '4px';
-        box.style.fontSize = '11px';
-        box.style.color = '#4b5563';
-        let html = '<div><small><strong>Obs. fletero (solo gerencia):</strong></small></div>';
-        snap.forEach(doc=>{
-          const o = doc.data();
-          const when = o.createdAt ? new Date(o.createdAt).toLocaleString() : '';
-          const who = o.fleteroEmail || '';
-          html += `<div>• ${when} – ${o.texto || ''} <span style="opacity:.7">(${who})</span></div>`;
-        });
-        box.innerHTML = html;
-        container.appendChild(box);
-      })
-      .catch(err=>console.error('Error cargando obs fletero', err));
+ // Cargar observaciones internas de fletero
+// - Admin (gerencia): ve TODAS las obs del movimiento
+// - Fletero: solo ve SUS propias obs en los movimientos que tiene asignados
+function loadFleteroObsForMov(movId, container){
+  if (!currentUser) return;
+
+  let q = db.collection(COL_MOV_FLET_OBS)
+    .where('movId','==',movId)
+    .orderBy('createdAt','asc');
+
+  // gerencia ve todo
+  if (currentRole === 'admin') {
+    // q tal cual
+  } 
+  // fletero solo sus propias observaciones
+  else if (currentRole === 'fletero') {
+    q = q.where('fleteroUid','==',currentUser.uid);
+  } 
+  // otros roles no ven nada
+  else {
+    return;
   }
 
+  q.get()
+    .then(snap=>{
+      if (snap.empty) return;
+
+      const box = document.createElement('div');
+      box.style.marginTop = '4px';
+      box.style.fontSize = '11px';
+      box.style.color = '#4b5563';
+
+      let titulo = 'Obs. fletero (solo gerencia):';
+      if (currentRole === 'fletero') {
+        titulo = 'Tus observaciones internas:';
+      }
+
+      let html = `<div><small><strong>${titulo}</strong></small></div>`;
+      snap.forEach(doc=>{
+        const o = doc.data();
+        const when = o.createdAt ? new Date(o.createdAt).toLocaleString() : '';
+        const who  = o.fleteroEmail || '';
+        html += `<div>• ${when} – ${o.texto || ''}${currentRole === 'admin' ? ` <span style="opacity:.7">(${who})</span>` : ''}</div>`;
+      });
+
+      box.innerHTML = html;
+      container.appendChild(box);
+    })
+    .catch(err=>console.error('Error cargando obs fletero', err));
+}
   /* ========== CHAT INTERNO GERENCIA ↔ FLETERO ========== */
 
   function clearChatListener(){
@@ -1831,6 +1862,7 @@ Dirección Cliente B..."></textarea>
 </script>
 </body>
 </html>
+
 
 
 
