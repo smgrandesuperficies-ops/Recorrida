@@ -9,10 +9,31 @@
   <h1>Página Varillas</h1>
   <p>Si ves este texto, la página carga bien.</p>
 
-  <script type="module">
-    import { db } from "../shared/firebase.js";
-    console.log("Firestore conectado:", db);
-  </script>
+<script type="module">
+  import { db } from "../shared/firebase.js";
+  import {
+    collection,
+    getDocs
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  // 🔁 CAMBIÁ este nombre por tu colección real
+  const ref = collection(db, "varillas");
+
+  async function cargar() {
+    const ul = document.createElement("ul");
+    document.body.appendChild(ul);
+
+    const snap = await getDocs(ref);
+    snap.forEach(doc => {
+      const li = document.createElement("li");
+      li.textContent = JSON.stringify(doc.data());
+      ul.appendChild(li);
+    });
+  }
+
+  cargar();
+</script>
+
 
 </body>
 </html>
