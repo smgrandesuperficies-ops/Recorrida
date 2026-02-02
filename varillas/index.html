@@ -1,124 +1,897 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Varillas</title>
-</head>
-<body>
-  <h1>Varillas</h1>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Producción · Carga diaria</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#0f1b33;
+      --line:#1f2a44;
+      --text:#e5e7eb;
+      --muted:#98a2b3;
+      --accent:#22c55e;
+      --warn:#f59e0b;
 
-  <div>
-    <input id="txtNombre" placeholder="Nombre (ej: Varilla 25cm)" />
-    <input id="txtStock" type="number" placeholder="Stock" />
-    <button id="btnGuardar">Guardar</button>
+      --alvear:#dbeafe;
+      --moron:#fce7f3;
+      --banado:#cffafe;
+      --neutro:#93c5fd;
+      --readonly:#0b1326;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--text);
+      padding:18px;
+    }
+    .wrap{max-width:1280px;margin:0 auto}
+    .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:16px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .row > *{flex:0 0 auto}
+    h1{font-size:18px;margin:0 0 10px}
+    .muted{color:var(--muted);font-size:12px}
+    input, select, button, textarea{
+      background:#0b1326;
+      border:1px solid var(--line);
+      color:var(--text);
+      border-radius:10px;
+      padding:10px 12px;
+      outline:none;
+    }
+    button{
+      cursor:pointer;
+      background:rgba(34,197,94,.12);
+      border:1px solid rgba(34,197,94,.35);
+    }
+    button:hover{filter:brightness(1.05)}
+    .btn-ghost{
+      background:transparent;
+      border:1px solid var(--line);
+    }
+    .btn-warn{
+      background:rgba(245,158,11,.10);
+      border:1px solid rgba(245,158,11,.35);
+    }
+    .pill{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+    }
+    .pill strong{font-weight:700}
+    .spacer{flex:1 1 auto}
+    .hidden{display:none !important}
+
+    /* tabla */
+    .table-wrap{overflow:auto;border-radius:14px;border:1px solid var(--line);margin-top:12px}
+    table{border-collapse:collapse;min-width:1200px;width:100%}
+    th, td{
+      border:1px solid rgba(31,42,68,.8);
+      padding:6px;
+      text-align:center;
+      font-size:12px;
+      white-space:nowrap;
+    }
+    thead th{position:sticky;top:0;background:#0b1326;z-index:3}
+    .sticky-left{position:sticky;left:0;z-index:2;background:#0b1326}
+    .sticky-left-2{position:sticky;left:240px;z-index:2;background:#0b1326}
+    .col-aroma{min-width:240px;text-align:left;padding-left:10px}
+    .sep{
+      font-weight:700;
+      text-align:left;
+      padding:8px 10px;
+      background:rgba(255,255,255,.06);
+    }
+
+    .bg-alv{background:rgba(219,234,254,.10)}
+    .bg-mor{background:rgba(252,231,243,.10)}
+    .bg-ban{background:rgba(207,250,254,.10)}
+    .bg-neu{background:rgba(147,197,253,.10)}
+    .ro{
+      background:rgba(11,19,38,.85) !important;
+      color:rgba(229,231,235,.85);
+      font-weight:700;
+    }
+
+    .cell{
+      display:flex;
+      gap:6px;
+      align-items:center;
+      justify-content:center;
+    }
+    .cell input{
+      width:78px;
+      padding:8px 8px;
+      border-radius:10px;
+      text-align:right;
+    }
+    .cell input:disabled{
+      opacity:.65;
+      cursor:not-allowed;
+    }
+    .cmt-btn{
+      width:30px;
+      height:30px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      cursor:pointer;
+      font-size:14px;
+      position:relative;
+    }
+    .cmt-btn[data-has="1"]::after{
+      content:"";
+      width:8px;height:8px;border-radius:999px;
+      background:var(--warn);
+      position:absolute;
+      top:4px;right:4px;
+    }
+
+    /* modal comentarios */
+    .modal-back{
+      position:fixed;inset:0;
+      background:rgba(0,0,0,.55);
+      display:flex;align-items:center;justify-content:center;
+      padding:16px;
+      z-index:9999;
+    }
+    .modal{
+      width:min(520px,100%);
+      background:#0b1326;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px;
+    }
+    .modal h3{margin:0 0 8px;font-size:14px}
+    .modal textarea{width:100%;min-height:110px;resize:vertical}
+    .modal .row{margin-top:10px}
+    .right{text-align:right}
+    .ok{color:var(--accent);font-size:12px}
+    .err{color:#fb7185;font-size:12px}
+
+    /* mini dashboard */
+    .dash{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns:repeat(4,minmax(180px,1fr));
+      gap:10px;
+    }
+    .kpi{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px;
+    }
+    .kpi .t{font-size:12px;color:var(--muted)}
+    .kpi .v{font-size:18px;font-weight:800;margin-top:4px}
+    @media (max-width:980px){
+      .dash{grid-template-columns:repeat(2,1fr)}
+      .sticky-left-2{left:200px}
+      .col-aroma{min-width:200px}
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="loginCard" class="card">
+    <h1>Ingreso por PIN</h1>
+    <div class="row">
+      <input id="pinInput" type="password" inputmode="numeric" placeholder="Ingresá tu PIN"/>
+      <button id="btnLogin">Entrar</button>
+      <span class="muted">Gerencia: PIN <strong>9873</strong></span>
+    </div>
+    <div id="loginMsg" class="muted" style="margin-top:8px"></div>
   </div>
 
-  <h3>Listado</h3>
-  <ul id="lista"></ul>
+  <!-- APP -->
+  <div id="appCard" class="card hidden">
+    <div class="row">
+      <div class="pill">Rol: <strong id="roleLabel"></strong></div>
+      <div class="pill">Fecha: <strong id="dateLabel"></strong></div>
+      <div class="spacer"></div>
 
-  <!-- Firebase compat (igual que tu index) -->
-  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
+      <input id="dateInput" type="date"/>
+      <button id="btnLoad">Cargar</button>
+      <button id="btnSave">Guardar</button>
+      <button id="btnLogout" class="btn-ghost">Salir</button>
+    </div>
 
- <script>
+    <div class="row" style="margin-top:10px">
+      <div class="muted" id="hint"></div>
+      <div class="spacer"></div>
+
+      <!-- SOLO GERENCIA -->
+      <div id="gerenciaTools" class="row hidden">
+        <select id="datesSelect">
+          <option value="">Ver otras fechas…</option>
+        </select>
+        <button id="btnGoDate" class="btn-warn">Ir</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="prodTable">
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="dash" id="miniDash"></div>
+
+    <div class="row" style="margin-top:10px">
+      <span class="ok" id="okMsg"></span>
+      <span class="err" id="errMsg"></span>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL COMENTARIOS -->
+<div id="modalBack" class="modal-back hidden">
+  <div class="modal">
+    <h3 id="modalTitle">Comentario</h3>
+    <div class="muted" id="modalSub"></div>
+    <textarea id="modalText" placeholder="Comentario opcional..."></textarea>
+    <div class="row">
+      <button id="btnModalSave">Guardar comentario</button>
+      <button id="btnModalClear" class="btn-warn">Borrar comentario</button>
+      <div class="spacer"></div>
+      <button id="btnModalClose" class="btn-ghost">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ===============================
+  // 1) Firebase
+  // ===============================
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import {
+    getFirestore, doc, getDoc, setDoc,
+    collection, getDocs, query, orderBy, limit
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+  // 🔴 PEGÁ ACÁ TU CONFIG
   const firebaseConfig = {
-    apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
-    authDomain: "recorrida-planta.firebaseapp.com",
-    projectId: "recorrida-planta",
-    storageBucket: "recorrida-planta.firebasestorage.app",
-    messagingSenderId: "528466299629",
-    appId: "1:528466299629:web:e1ebe7fab15d030d6e5ae4",
-    measurementId: "G-XPV4W80QZ2"
+    apiKey: "TU_API_KEY",
+    authDomain: "TU_AUTH_DOMAIN",
+    projectId: "TU_PROJECT_ID",
+    storageBucket: "TU_STORAGE_BUCKET",
+    messagingSenderId: "TU_SENDER_ID",
+    appId: "TU_APP_ID",
   };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const auth = firebase.auth();
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
 
-  const $ = (id) => document.getElementById(id);
+  // ===============================
+  // 2) Roles por PIN (simple)
+  // ===============================
+  const PINS = {
+    GERENCIA: "9873",
+    BANADO:   "1111",  // ← cambiá
+    MORON:    "2222",  // ← cambiá
+    ALVEAR:   "3333",  // ← cambiá
+  };
 
-  function renderLogin(){
-    document.body.innerHTML = `
-      <h2>Login Varillas</h2>
-      <input id="email" placeholder="Email" style="display:block;margin:8px 0;padding:8px;width:280px">
-      <input id="pass" type="password" placeholder="Contraseña" style="display:block;margin:8px 0;padding:8px;width:280px">
-      <button id="btn" style="padding:8px 12px">Ingresar</button>
-      <p style="color:#555">Usá el mismo usuario que en el sistema principal.</p>
-    `;
+  const ROLE_HINTS = {
+    ALVEAR: "Podés completar: Lin, Alv, Alve+, Alve-, DIF (no totales).",
+    MORON:  "Podés completar: MOR+, MOR-, DIF (no totales).",
+    BANADO: "Podés completar: baña+, +/-, secando, cosech, salida, dif (no totales).",
+    GERENCIA: "Podés ver todas las fechas y editar cualquier número (totales siempre bloqueados)."
+  };
 
-    $("btn").onclick = async () => {
-      const email = $("email").value.trim();
-      const pass  = $("pass").value.trim();
-      if(!email || !pass) return alert("Completá email y contraseña");
-      try{
-        await auth.signInWithEmailAndPassword(email, pass);
-      }catch(e){
-        alert("Error: " + e.message);
-      }
-    };
+  // Permisos por rol (según tu planilla)
+  const EDITABLE_FIELDS = {
+    ALVEAR:   ["alv.lin","alv.alv","alv.alve_plus","alv.alve_minus","alv.dif"],
+    MORON:    ["mor.mor_plus","mor.mor_minus","mor.dif"],
+    BANADO:   ["neu.bana_plus","neu.pm","ban.secando","ban.cosech","ban.salida","ban.dif"],
+    GERENCIA: [
+      // gerencia puede editar TODO lo “no total” (todo lo que se carga)
+      "alv.lin","alv.alv","alv.alve_plus","alv.alve_minus","alv.dif",
+      "mor.mor_plus","mor.mor_minus","mor.dif",
+      "neu.bana_plus","neu.pm",
+      "ban.secando","ban.cosech","ban.salida","ban.dif"
+    ]
+  };
+
+  // Campos calculados (NADIE edita)
+  const TOTAL_FIELDS = [
+    "alv.total1",   // H = F+G
+    "alv.total2",   // L = B + I - J + K
+    "mor.total",    // P = C + M - N + O
+    "neu.total",    // S = R + H
+    "ban.total_secando", // U = D + T - V
+    "ban.total"     // Y = E + Q + V - W + X
+  ];
+
+  // ===============================
+  // 3) Estado
+  // ===============================
+  let ROLE = null;
+  let aromas = [];       // desde Firestore
+  let currentDate = null; // yyyy-mm-dd
+  let dataDoc = null;     // doc actual
+  let commentsDoc = null; // comentarios del día
+
+  // Cache UI para comentarios
+  let modalCtx = null; // {aromaId, fieldKey, aromaNombre}
+
+  // ===============================
+  // 4) Helpers
+  // ===============================
+  const $ = (id)=>document.getElementById(id);
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function todayISO(){
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function monthKey(dateISO){ return dateISO.slice(0,7); }
+
+  function parseNum(v){
+    const n = Number(String(v).replace(",","."));
+    return Number.isFinite(n) ? n : 0;
   }
 
-  async function renderApp(){
-    document.body.innerHTML = `
-      <h1>Varillas</h1>
-      <button id="logout">Salir</button>
-      <div style="margin:10px 0">
-        <input id="txtNombre" placeholder="Nombre (ej: Varilla 25cm)" />
-        <input id="txtStock" type="number" placeholder="Stock" />
-        <button id="btnGuardar">Guardar</button>
-      </div>
-      <ul id="lista"></ul>
-    `;
-
-    $("logout").onclick = () => auth.signOut();
-
-    $("btnGuardar").onclick = async () => {
-      const nombre = $("txtNombre").value.trim();
-      const stock = Number($("txtStock").value || 0);
-      if (!nombre) return alert("Poné un nombre");
-      await db.collection("varillas").add({
-        nombre,
-        stock,
-        creadoEn: new Date().toISOString()
-      });
-      $("txtNombre").value = "";
-      $("txtStock").value = "";
-      cargar();
-    };
-
-    cargar();
+  function canEdit(fieldKey){
+    if(!ROLE) return false;
+    return EDITABLE_FIELDS[ROLE]?.includes(fieldKey) ?? false;
   }
 
-  async function cargar(){
-    const ul = $("lista");
-    ul.innerHTML = "Cargando...";
+  // ===============================
+  // 5) Fórmulas (tal cual Excel)
+  // ===============================
+  function computeRow(row){
+    // stocks iniciales (solo lectura)
+    const B = parseNum(row.init?.alvear ?? 0);
+    const C = parseNum(row.init?.moron ?? 0);
+    const D = parseNum(row.init?.secando ?? 0);
+    const E = parseNum(row.init?.banado ?? 0);
 
-    const snap = await db.collection("varillas").orderBy("nombre").get();
+    // ALVEAR inputs
+    const F = parseNum(row.alv?.lin ?? 0);
+    const G = parseNum(row.alv?.alv ?? 0);
+    const I = parseNum(row.alv?.alve_plus ?? 0);
+    const J = parseNum(row.alv?.alve_minus ?? 0);
+    const K = parseNum(row.alv?.dif ?? 0);
 
-    ul.innerHTML = "";
-    snap.forEach((doc) => {
-      const d = doc.data();
-      const li = document.createElement("li");
-      li.innerHTML = `<b>${d.nombre || "-"}</b> — stock: ${d.stock ?? 0}
-                      <button onclick="borrar('${doc.id}')">Eliminar</button>`;
-      ul.appendChild(li);
+    // MORON inputs
+    const M = parseNum(row.mor?.mor_plus ?? 0);
+    const N = parseNum(row.mor?.mor_minus ?? 0);
+    const O = parseNum(row.mor?.dif ?? 0);
+
+    // NEUTRO inputs
+    const Q = parseNum(row.neu?.bana_plus ?? 0);
+    const R = parseNum(row.neu?.pm ?? 0);
+
+    // BAÑADO inputs
+    const T = parseNum(row.ban?.secando ?? 0);
+    const V = parseNum(row.ban?.cosech ?? 0);
+    const W = parseNum(row.ban?.salida ?? 0);
+    const X = parseNum(row.ban?.dif ?? 0);
+
+    // Totales
+    const H = F + G;             // Total1
+    const L = B + I - J + K;     // Total2 (ALVEAR final)
+    const P = C + M - N + O;     // MORON total
+    const S = R + H;             // NEUTRO total
+    const U = D + T - V;         // total secando
+    const Y = E + Q + V - W + X; // total bañado
+
+    return {H,L,P,S,U,Y};
+  }
+
+  // ===============================
+  // 6) Firestore paths
+  // ===============================
+  function dayDocRef(dateISO){
+    const m = monthKey(dateISO);
+    return doc(db, "produccion", m, "dias", dateISO);
+  }
+  function dayCommentsRef(dateISO){
+    const m = monthKey(dateISO);
+    return doc(db, "produccion", m, "comentarios", dateISO);
+  }
+
+  // ===============================
+  // 7) Cargar aromas desde Firestore
+  // ===============================
+  async function loadAromas(){
+    // Colección: aromas (ordenados)
+    const qy = query(collection(db, "aromas"), orderBy("orden","asc"));
+    const snap = await getDocs(qy);
+    aromas = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    if(!aromas.length){
+      throw new Error("No hay aromas en Firestore (colección 'aromas').");
+    }
+  }
+
+  // ===============================
+  // 8) Cargar fechas (solo gerencia)
+  // ===============================
+  async function loadRecentDates(){
+    if(ROLE !== "GERENCIA") return;
+    // Traigo últimas 30 fechas del mes actual (rápido)
+    const m = monthKey(currentDate);
+    const qy = query(collection(db, "produccion", m, "dias"), orderBy("fecha","desc"), limit(30));
+    const snap = await getDocs(qy);
+    const sel = $("datesSelect");
+    sel.innerHTML = `<option value="">Ver otras fechas…</option>`;
+    snap.docs.forEach(d=>{
+      const id = d.id; // yyyy-mm-dd
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id;
+      sel.appendChild(opt);
     });
   }
 
-  async function borrar(id){
-    if(!confirm("¿Eliminar?")) return;
-    await db.collection("varillas").doc(id).delete();
-    cargar();
+  // ===============================
+  // 9) Preparar estructura por aroma
+  // ===============================
+  function emptyRow(){
+    return {
+      init:{ alvear:0, moron:0, secando:0, banado:0 },
+      alv:{ lin:0, alv:0, alve_plus:0, alve_minus:0, dif:0 },
+      mor:{ mor_plus:0, mor_minus:0, dif:0 },
+      neu:{ bana_plus:0, pm:0 },
+      ban:{ secando:0, cosech:0, salida:0, dif:0 }
+    };
   }
-  window.borrar = borrar;
 
-  auth.onAuthStateChanged((user) => {
-    if (!user) renderLogin();
-    else renderApp();
+  function ensureDataDoc(){
+    if(!dataDoc){
+      dataDoc = { fecha: currentDate, filas: {} };
+    }
+    if(!dataDoc.filas) dataDoc.filas = {};
+    for(const a of aromas){
+      if(!dataDoc.filas[a.id]){
+        dataDoc.filas[a.id] = emptyRow();
+        // init puede venir de aromas (opcional)
+        if(a.init){
+          dataDoc.filas[a.id].init = {
+            alvear: a.init.alvear ?? 0,
+            moron: a.init.moron ?? 0,
+            secando: a.init.secando ?? 0,
+            banado: a.init.banado ?? 0,
+          };
+        }
+      }
+    }
+  }
+
+  // ===============================
+  // 10) Cargar día (data + comentarios)
+  // ===============================
+  async function loadDay(dateISO){
+    currentDate = dateISO;
+    $("dateInput").value = dateISO;
+    $("dateLabel").textContent = dateISO;
+    $("okMsg").textContent = "";
+    $("errMsg").textContent = "";
+
+    // data
+    const ref = dayDocRef(dateISO);
+    const snap = await getDoc(ref);
+    dataDoc = snap.exists() ? snap.data() : { fecha: dateISO, filas: {} };
+
+    // comentarios
+    const cref = dayCommentsRef(dateISO);
+    const csnap = await getDoc(cref);
+    commentsDoc = csnap.exists() ? csnap.data() : { fecha: dateISO, c: {} };
+
+    ensureDataDoc();
+    renderTable();
+    renderMiniDash();
+    await loadRecentDates();
+  }
+
+  // ===============================
+  // 11) Render tabla
+  // ===============================
+  function theadHTML(){
+    return `
+      <tr>
+        <th class="sticky-left col-aroma" rowspan="2">AROMAS</th>
+        <th rowspan="2">ALVEAR<br><span class="muted">ini</span></th>
+        <th rowspan="2">MORON<br><span class="muted">ini</span></th>
+        <th rowspan="2">SECANDO<br><span class="muted">ini</span></th>
+        <th rowspan="2">BAÑADO<br><span class="muted">ini</span></th>
+
+        <th colspan="7" class="bg-alv">ALVEAR</th>
+        <th colspan="4" class="bg-mor">MORON</th>
+        <th colspan="3" class="bg-neu">NEUTRO</th>
+        <th colspan="6" class="bg-ban">BAÑADO</th>
+      </tr>
+      <tr>
+        <th class="bg-alv">Lin</th>
+        <th class="bg-alv">Alv</th>
+        <th class="bg-alv ro">Total</th>
+        <th class="bg-alv">Alve+</th>
+        <th class="bg-alv">Alve-</th>
+        <th class="bg-alv">DIF</th>
+        <th class="bg-alv ro">Total</th>
+
+        <th class="bg-mor">MOR+</th>
+        <th class="bg-mor">MOR-</th>
+        <th class="bg-mor">DIF</th>
+        <th class="bg-mor ro">TOTAL</th>
+
+        <th class="bg-neu">baña+</th>
+        <th class="bg-neu">+/-</th>
+        <th class="bg-neu ro">TOTAL</th>
+
+        <th class="bg-ban">secando</th>
+        <th class="bg-ban ro">total secando</th>
+        <th class="bg-ban">cosech</th>
+        <th class="bg-ban">salida</th>
+        <th class="bg-ban">dif</th>
+        <th class="bg-ban ro">total</th>
+      </tr>
+    `;
+  }
+
+  function getComment(aromaId, fieldKey){
+    return commentsDoc?.c?.[aromaId]?.[fieldKey] ?? "";
+  }
+
+  function setComment(aromaId, fieldKey, text){
+    if(!commentsDoc.c) commentsDoc.c = {};
+    if(!commentsDoc.c[aromaId]) commentsDoc.c[aromaId] = {};
+    commentsDoc.c[aromaId][fieldKey] = text;
+  }
+
+  function cellInput(aromaId, fieldKey, value, disabled, aromaNombre){
+    const has = getComment(aromaId, fieldKey) ? "1" : "0";
+    const can = !disabled;
+    const disAttr = can ? "" : "disabled";
+    const title = can ? "Agregar comentario" : "Comentario (solo lectura)";
+    return `
+      <div class="cell">
+        <input data-a="${aromaId}" data-k="${fieldKey}" value="${value ?? 0}" ${disAttr}/>
+        <span class="cmt-btn" title="${title}" data-a="${aromaId}" data-k="${fieldKey}" data-n="${escapeHtml(aromaNombre)}" data-has="${has}">💬</span>
+      </div>
+    `;
+  }
+
+  function roCell(val){
+    return `<div class="cell"><input class="ro" disabled value="${val}"/></div>`;
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  }
+
+  function renderTable(){
+    $("thead").innerHTML = theadHTML();
+
+    const tb = [];
+    let lastLinea = null;
+
+    for(const a of aromas){
+      if(a.activo === false) continue;
+
+      if(a.linea && a.linea !== lastLinea){
+        tb.push(`
+          <tr>
+            <td class="sep sticky-left" colspan="25">${escapeHtml(a.linea)}</td>
+          </tr>
+        `);
+        lastLinea = a.linea;
+      }
+
+      const row = dataDoc.filas[a.id];
+      const c = computeRow(row);
+
+      // init
+      const B = parseNum(row.init?.alvear ?? 0);
+      const C = parseNum(row.init?.moron ?? 0);
+      const D = parseNum(row.init?.secando ?? 0);
+      const E = parseNum(row.init?.banado ?? 0);
+
+      // values
+      const v = {
+        "alv.lin": row.alv.lin ?? 0,
+        "alv.alv": row.alv.alv ?? 0,
+        "alv.alve_plus": row.alv.alve_plus ?? 0,
+        "alv.alve_minus": row.alv.alve_minus ?? 0,
+        "alv.dif": row.alv.dif ?? 0,
+
+        "mor.mor_plus": row.mor.mor_plus ?? 0,
+        "mor.mor_minus": row.mor.mor_minus ?? 0,
+        "mor.dif": row.mor.dif ?? 0,
+
+        "neu.bana_plus": row.neu.bana_plus ?? 0,
+        "neu.pm": row.neu.pm ?? 0,
+
+        "ban.secando": row.ban.secando ?? 0,
+        "ban.cosech": row.ban.cosech ?? 0,
+        "ban.salida": row.ban.salida ?? 0,
+        "ban.dif": row.ban.dif ?? 0,
+      };
+
+      tb.push(`
+        <tr>
+          <td class="sticky-left col-aroma">${escapeHtml(a.nombre)}</td>
+          <td class="ro">${B}</td>
+          <td class="ro">${C}</td>
+          <td class="ro">${D}</td>
+          <td class="ro">${E}</td>
+
+          <td class="bg-alv">${cellInput(a.id,"alv.lin",v["alv.lin"], !canEdit("alv.lin"), a.nombre)}</td>
+          <td class="bg-alv">${cellInput(a.id,"alv.alv",v["alv.alv"], !canEdit("alv.alv"), a.nombre)}</td>
+          <td class="bg-alv">${roCell(c.H)}</td>
+          <td class="bg-alv">${cellInput(a.id,"alv.alve_plus",v["alv.alve_plus"], !canEdit("alv.alve_plus"), a.nombre)}</td>
+          <td class="bg-alv">${cellInput(a.id,"alv.alve_minus",v["alv.alve_minus"], !canEdit("alv.alve_minus"), a.nombre)}</td>
+          <td class="bg-alv">${cellInput(a.id,"alv.dif",v["alv.dif"], !canEdit("alv.dif"), a.nombre)}</td>
+          <td class="bg-alv">${roCell(c.L)}</td>
+
+          <td class="bg-mor">${cellInput(a.id,"mor.mor_plus",v["mor.mor_plus"], !canEdit("mor.mor_plus"), a.nombre)}</td>
+          <td class="bg-mor">${cellInput(a.id,"mor.mor_minus",v["mor.mor_minus"], !canEdit("mor.mor_minus"), a.nombre)}</td>
+          <td class="bg-mor">${cellInput(a.id,"mor.dif",v["mor.dif"], !canEdit("mor.dif"), a.nombre)}</td>
+          <td class="bg-mor">${roCell(c.P)}</td>
+
+          <td class="bg-neu">${cellInput(a.id,"neu.bana_plus",v["neu.bana_plus"], !canEdit("neu.bana_plus"), a.nombre)}</td>
+          <td class="bg-neu">${cellInput(a.id,"neu.pm",v["neu.pm"], !canEdit("neu.pm"), a.nombre)}</td>
+          <td class="bg-neu">${roCell(c.S)}</td>
+
+          <td class="bg-ban">${cellInput(a.id,"ban.secando",v["ban.secando"], !canEdit("ban.secando"), a.nombre)}</td>
+          <td class="bg-ban">${roCell(c.U)}</td>
+          <td class="bg-ban">${cellInput(a.id,"ban.cosech",v["ban.cosech"], !canEdit("ban.cosech"), a.nombre)}</td>
+          <td class="bg-ban">${cellInput(a.id,"ban.salida",v["ban.salida"], !canEdit("ban.salida"), a.nombre)}</td>
+          <td class="bg-ban">${cellInput(a.id,"ban.dif",v["ban.dif"], !canEdit("ban.dif"), a.nombre)}</td>
+          <td class="bg-ban">${roCell(c.Y)}</td>
+        </tr>
+      `);
+    }
+
+    $("tbody").innerHTML = tb.join("");
+    wireTableEvents();
+  }
+
+  function wireTableEvents(){
+    // Inputs: update data + recalcular totales al vuelo
+    $("tbody").querySelectorAll("input[data-a]").forEach(inp=>{
+      inp.addEventListener("input", ()=>{
+        const aromaId = inp.dataset.a;
+        const key = inp.dataset.k;
+        const val = parseNum(inp.value);
+
+        const row = dataDoc.filas[aromaId];
+        // map key -> object
+        const [grp, field] = key.split(".");
+        if(!row[grp]) row[grp] = {};
+        row[grp][field] = val;
+
+        // rerender fila completa para recalcular totales visualmente
+        // (simple: rerender todo; si querés optimizar después, se puede)
+        renderTable();
+        renderMiniDash();
+      });
+    });
+
+    // Comentarios
+    $("tbody").querySelectorAll(".cmt-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const aromaId = btn.dataset.a;
+        const key = btn.dataset.k;
+        const name = btn.dataset.n;
+
+        // Si el campo es de totales, igual dejalo ver, pero solo permitir comentar si es un campo editable del rol
+        // Vos pediste: "comentarios sobre el casillero en donde ponen los datos"
+        if(!canEdit(key) && ROLE !== "GERENCIA"){
+          // solo lectura: muestro comentario si existe
+          openModal(aromaId, key, name, true);
+          return;
+        }
+        openModal(aromaId, key, name, false);
+      });
+    });
+  }
+
+  // ===============================
+  // 12) Mini-dashboard del día (verificación)
+  // ===============================
+  function renderMiniDash(){
+    // suma de totales Y (bañado final), L (alvear final), P (moron total), S (neutro total)
+    let sumY=0, sumL=0, sumP=0, sumS=0;
+    for(const a of aromas){
+      if(a.activo === false) continue;
+      const r = dataDoc.filas[a.id];
+      const c = computeRow(r);
+      sumY += c.Y;
+      sumL += c.L;
+      sumP += c.P;
+      sumS += c.S;
+    }
+    $("miniDash").innerHTML = `
+      <div class="kpi"><div class="t">Σ Total BAÑADO (Y)</div><div class="v">${sumY}</div></div>
+      <div class="kpi"><div class="t">Σ Total ALVEAR (L)</div><div class="v">${sumL}</div></div>
+      <div class="kpi"><div class="t">Σ Total MORON (P)</div><div class="v">${sumP}</div></div>
+      <div class="kpi"><div class="t">Σ Total NEUTRO (S)</div><div class="v">${sumS}</div></div>
+    `;
+  }
+
+  // ===============================
+  // 13) Guardar (solo campos permitidos + comentarios)
+  // ===============================
+  async function saveDay(){
+    try{
+      $("okMsg").textContent = "";
+      $("errMsg").textContent = "";
+
+      // Armamos payload: solo lo que el rol puede editar
+      const allowed = new Set(EDITABLE_FIELDS[ROLE] || []);
+      const out = { fecha: currentDate, filas: {} };
+
+      for(const a of aromas){
+        if(a.activo === false) continue;
+        const row = dataDoc.filas[a.id];
+        const o = {};
+
+        // copia selectiva
+        for(const key of allowed){
+          const [grp, field] = key.split(".");
+          if(!o[grp]) o[grp] = {};
+          o[grp][field] = row?.[grp]?.[field] ?? 0;
+        }
+
+        // Guardamos SOLO si el rol tiene algo para ese aroma
+        // (para merge no hace falta completo, pero ordenado queda mejor)
+        out.filas[a.id] = o;
+      }
+
+      // Merge parcial: no pisa lo de otros roles
+      await setDoc(dayDocRef(currentDate), out, { merge:true });
+
+      // Comentarios: merge
+      await setDoc(dayCommentsRef(currentDate), commentsDoc, { merge:true });
+
+      $("okMsg").textContent = "Guardado correcto ✅";
+    }catch(e){
+      console.error(e);
+      $("errMsg").textContent = "Error al guardar: " + (e?.message || e);
+    }
+  }
+
+  // ===============================
+  // 14) Modal comentarios
+  // ===============================
+  function openModal(aromaId, fieldKey, aromaNombre, readOnly){
+    modalCtx = { aromaId, fieldKey, aromaNombre, readOnly };
+    $("modalTitle").textContent = `Comentario · ${aromaNombre}`;
+    $("modalSub").textContent = `Campo: ${fieldKey}`;
+    $("modalText").value = getComment(aromaId, fieldKey);
+
+    // si es solo lectura, deshabilito guardar/borrar para roles no gerencia
+    const ro = readOnly && ROLE !== "GERENCIA";
+    $("modalText").disabled = ro;
+    $("btnModalSave").disabled = ro;
+    $("btnModalClear").disabled = ro;
+
+    $("modalBack").classList.remove("hidden");
+  }
+
+  function closeModal(){
+    $("modalBack").classList.add("hidden");
+    modalCtx = null;
+  }
+
+  $("btnModalClose").addEventListener("click", closeModal);
+
+  $("btnModalSave").addEventListener("click", ()=>{
+    if(!modalCtx) return;
+    const t = $("modalText").value.trim();
+    setComment(modalCtx.aromaId, modalCtx.fieldKey, t);
+    closeModal();
+    renderTable(); // para marcar la burbuja
   });
-</script>
 
+  $("btnModalClear").addEventListener("click", ()=>{
+    if(!modalCtx) return;
+    setComment(modalCtx.aromaId, modalCtx.fieldKey, "");
+    closeModal();
+    renderTable();
+  });
+
+  // ===============================
+  // 15) Login / Logout / navegación
+  // ===============================
+  function setRole(role){
+    ROLE = role;
+    $("roleLabel").textContent = role;
+    $("hint").textContent = ROLE_HINTS[role] || "";
+    $("gerenciaTools").classList.toggle("hidden", role !== "GERENCIA");
+  }
+
+  function showApp(){
+    $("loginCard").classList.add("hidden");
+    $("appCard").classList.remove("hidden");
+  }
+
+  function showLogin(){
+    $("appCard").classList.add("hidden");
+    $("loginCard").classList.remove("hidden");
+    $("pinInput").value = "";
+    $("loginMsg").textContent = "";
+    ROLE = null;
+  }
+
+  function roleFromPin(pin){
+    if(pin === PINS.GERENCIA) return "GERENCIA";
+    if(pin === PINS.BANADO)   return "BANADO";
+    if(pin === PINS.MORON)    return "MORON";
+    if(pin === PINS.ALVEAR)   return "ALVEAR";
+    return null;
+  }
+
+  $("btnLogin").addEventListener("click", async ()=>{
+    const pin = $("pinInput").value.trim();
+    const r = roleFromPin(pin);
+    if(!r){
+      $("loginMsg").textContent = "PIN incorrecto.";
+      return;
+    }
+    try{
+      setRole(r);
+      showApp();
+
+      // fecha hoy por defecto
+      const d = todayISO();
+      $("dateInput").value = d;
+      $("dateLabel").textContent = d;
+
+      // cargar aromas + día
+      await loadAromas();
+      await loadDay(d);
+
+    }catch(e){
+      console.error(e);
+      $("loginMsg").textContent = "Error iniciando: " + (e?.message || e);
+      showLogin();
+    }
+  });
+
+  $("btnLogout").addEventListener("click", ()=>{
+    dataDoc = null;
+    commentsDoc = null;
+    aromas = [];
+    currentDate = null;
+    showLogin();
+  });
+
+  $("btnLoad").addEventListener("click", async ()=>{
+    const d = $("dateInput").value;
+    if(!d) return;
+    await loadDay(d);
+  });
+
+  $("btnSave").addEventListener("click", saveDay);
+
+  $("btnGoDate").addEventListener("click", async ()=>{
+    const sel = $("datesSelect").value;
+    if(!sel) return;
+    await loadDay(sel);
+  });
+
+</script>
 </body>
 </html>
