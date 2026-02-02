@@ -1,39 +1,91 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Varillas</title>
 </head>
 <body>
+  <h1>Varillas</h1>
 
-  <h1>Página Varillas</h1>
-  <p>Si ves este texto, la página carga bien.</p>
+  <div>
+    <input id="txtNombre" placeholder="Nombre (ej: Varilla 25cm)" />
+    <input id="txtStock" type="number" placeholder="Stock" />
+    <button id="btnGuardar">Guardar</button>
+  </div>
 
-<script type="module">
-  import { db } from "../shared/firebase.js";
-  import {
-    collection,
-    getDocs
-  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  <h3>Listado</h3>
+  <ul id="lista"></ul>
 
-  // 🔁 CAMBIÁ este nombre por tu colección real
-const ref = collection(db, "usuarios");
+  <!-- Firebase compat (igual que tu index) -->
+  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 
-  async function cargar() {
-    const ul = document.createElement("ul");
-    document.body.appendChild(ul);
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
+      authDomain: "recorrida-planta.firebaseapp.com",
+      projectId: "recorrida-planta",
+      storageBucket: "recorrida-planta.firebasestorage.app",
+      messagingSenderId: "528466299629",
+      appId: "1:528466299629:web:e1ebe7fab15d030d6e5ae4",
+      measurementId: "G-XPV4W80QZ2"
+    };
 
-    const snap = await getDocs(ref);
-    snap.forEach(doc => {
-      const li = document.createElement("li");
-      li.textContent = JSON.stringify(doc.data());
-      ul.appendChild(li);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const $ = (id) => document.getElementById(id);
+
+    // ✅ si querés obligar login:
+    auth.onAuthStateChanged((user) => {
+      if (!user) {
+        document.body.innerHTML = "<h2>Tenés que iniciar sesión en el sistema principal.</h2><p>Volvé al inicio y logueate.</p>";
+        return;
+      }
+      cargar();
     });
-  }
 
-  cargar();
-</script>
+    async function cargar() {
+      const ul = $("lista");
+      ul.innerHTML = "Cargando...";
 
+      const snap = await db.collection("varillas").orderBy("nombre").get();
 
+      ul.innerHTML = "";
+      snap.forEach((doc) => {
+        const d = doc.data();
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${d.nombre || "-"}</strong> — stock: ${d.stock ?? 0}
+                        <button onclick="borrar('${doc.id}')">Eliminar</button>`;
+        ul.appendChild(li);
+      });
+    }
+
+    async function borrar(id) {
+      if (!confirm("¿Eliminar?")) return;
+      await db.collection("varillas").doc(id).delete();
+      cargar();
+    }
+    window.borrar = borrar;
+
+    $("btnGuardar").onclick = async () => {
+      const nombre = $("txtNombre").value.trim();
+      const stock = Number($("txtStock").value || 0);
+      if (!nombre) return alert("Poné un nombre");
+
+      await db.collection("varillas").add({
+        nombre,
+        stock,
+        creadoEn: new Date().toISOString()
+      });
+
+      $("txtNombre").value = "";
+      $("txtStock").value = "";
+      cargar();
+    };
+  </script>
 </body>
 </html>
