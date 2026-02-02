@@ -22,70 +22,103 @@
   <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
-      authDomain: "recorrida-planta.firebaseapp.com",
-      projectId: "recorrida-planta",
-      storageBucket: "recorrida-planta.firebasestorage.app",
-      messagingSenderId: "528466299629",
-      appId: "1:528466299629:web:e1ebe7fab15d030d6e5ae4",
-      measurementId: "G-XPV4W80QZ2"
-    };
+ <script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDREgLXzhcblLmAD8ROhdin29TwGjCkH7Q",
+    authDomain: "recorrida-planta.firebaseapp.com",
+    projectId: "recorrida-planta",
+    storageBucket: "recorrida-planta.firebasestorage.app",
+    messagingSenderId: "528466299629",
+    appId: "1:528466299629:web:e1ebe7fab15d030d6e5ae4",
+    measurementId: "G-XPV4W80QZ2"
+  };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
 
-    const $ = (id) => document.getElementById(id);
+  const $ = (id) => document.getElementById(id);
 
-    // ✅ si querés obligar login:
-    auth.onAuthStateChanged((user) => {
-      if (!user) {
-        document.body.innerHTML = "<h2>Tenés que iniciar sesión en el sistema principal.</h2><p>Volvé al inicio y logueate.</p>";
-        return;
+  function renderLogin(){
+    document.body.innerHTML = `
+      <h2>Login Varillas</h2>
+      <input id="email" placeholder="Email" style="display:block;margin:8px 0;padding:8px;width:280px">
+      <input id="pass" type="password" placeholder="Contraseña" style="display:block;margin:8px 0;padding:8px;width:280px">
+      <button id="btn" style="padding:8px 12px">Ingresar</button>
+      <p style="color:#555">Usá el mismo usuario que en el sistema principal.</p>
+    `;
+
+    $("btn").onclick = async () => {
+      const email = $("email").value.trim();
+      const pass  = $("pass").value.trim();
+      if(!email || !pass) return alert("Completá email y contraseña");
+      try{
+        await auth.signInWithEmailAndPassword(email, pass);
+      }catch(e){
+        alert("Error: " + e.message);
       }
-      cargar();
-    });
+    };
+  }
 
-    async function cargar() {
-      const ul = $("lista");
-      ul.innerHTML = "Cargando...";
+  async function renderApp(){
+    document.body.innerHTML = `
+      <h1>Varillas</h1>
+      <button id="logout">Salir</button>
+      <div style="margin:10px 0">
+        <input id="txtNombre" placeholder="Nombre (ej: Varilla 25cm)" />
+        <input id="txtStock" type="number" placeholder="Stock" />
+        <button id="btnGuardar">Guardar</button>
+      </div>
+      <ul id="lista"></ul>
+    `;
 
-      const snap = await db.collection("varillas").orderBy("nombre").get();
-
-      ul.innerHTML = "";
-      snap.forEach((doc) => {
-        const d = doc.data();
-        const li = document.createElement("li");
-        li.innerHTML = `<strong>${d.nombre || "-"}</strong> — stock: ${d.stock ?? 0}
-                        <button onclick="borrar('${doc.id}')">Eliminar</button>`;
-        ul.appendChild(li);
-      });
-    }
-
-    async function borrar(id) {
-      if (!confirm("¿Eliminar?")) return;
-      await db.collection("varillas").doc(id).delete();
-      cargar();
-    }
-    window.borrar = borrar;
+    $("logout").onclick = () => auth.signOut();
 
     $("btnGuardar").onclick = async () => {
       const nombre = $("txtNombre").value.trim();
       const stock = Number($("txtStock").value || 0);
       if (!nombre) return alert("Poné un nombre");
-
       await db.collection("varillas").add({
         nombre,
         stock,
         creadoEn: new Date().toISOString()
       });
-
       $("txtNombre").value = "";
       $("txtStock").value = "";
       cargar();
     };
-  </script>
+
+    cargar();
+  }
+
+  async function cargar(){
+    const ul = $("lista");
+    ul.innerHTML = "Cargando...";
+
+    const snap = await db.collection("varillas").orderBy("nombre").get();
+
+    ul.innerHTML = "";
+    snap.forEach((doc) => {
+      const d = doc.data();
+      const li = document.createElement("li");
+      li.innerHTML = `<b>${d.nombre || "-"}</b> — stock: ${d.stock ?? 0}
+                      <button onclick="borrar('${doc.id}')">Eliminar</button>`;
+      ul.appendChild(li);
+    });
+  }
+
+  async function borrar(id){
+    if(!confirm("¿Eliminar?")) return;
+    await db.collection("varillas").doc(id).delete();
+    cargar();
+  }
+  window.borrar = borrar;
+
+  auth.onAuthStateChanged((user) => {
+    if (!user) renderLogin();
+    else renderApp();
+  });
+</script>
+
 </body>
 </html>
