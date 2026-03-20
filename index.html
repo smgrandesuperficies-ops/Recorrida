@@ -591,6 +591,120 @@ button.ghost{
   border: 1px solid #475569;
   color: #cbd5f5;
 }
+    /* =========================================================
+   ✨ PREMIUM REFINEMENT (DETALLE FINO PRO)
+========================================================= */
+
+/* === MOVIMIENTOS (tipo tarjeta pro) === */
+.movement{
+  background: linear-gradient(145deg,#1e293b,#172033);
+  border: 1px solid rgba(148,163,184,0.15);
+  border-radius: 12px;
+  padding: 12px;
+  transition: all .25s ease;
+  position: relative;
+}
+
+.movement:hover{
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+  border-color: rgba(99,102,241,0.4);
+}
+
+/* línea lateral sutil (MUY PRO) */
+.movement::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:4px;
+  border-radius:12px 0 0 12px;
+  background: linear-gradient(#6366f1,#22c55e);
+  opacity:0.7;
+}
+
+/* título del movimiento */
+.movement strong{
+  font-size: 14px;
+  color: #f1f5f9;
+}
+
+/* texto secundario */
+.movement small{
+  color: #94a3b8;
+}
+
+/* === BADGES MÁS PREMIUM === */
+.badge{
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+
+/* === BOTÓN BORRAR MÁS LIMPIO === */
+.delete-x{
+  background: linear-gradient(135deg,#f97316,#ea580c);
+  box-shadow: 0 4px 10px rgba(249,115,22,0.4);
+}
+
+.delete-x:hover{
+  transform: scale(1.1);
+}
+
+/* === FILTROS (Todos / Materia Prima / etc) === */
+.filter-bar button{
+  background: transparent;
+  border: 1px solid #334155;
+  color: #cbd5f5;
+}
+
+.filter-bar button:hover{
+  background: rgba(99,102,241,0.15);
+  border-color: #6366f1;
+}
+
+.filter-active{
+  background: linear-gradient(135deg,#6366f1,#4f46e5);
+  color: white !important;
+  border: none;
+}
+
+/* === TABLAS NIVEL PRO === */
+.admin-table{
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.admin-table th{
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.admin-table tr{
+  transition: background .2s ease;
+}
+
+.admin-table tr:hover td{
+  background: rgba(99,102,241,0.08);
+}
+
+/* líneas más suaves */
+.admin-table td, .admin-table th{
+  border-color: rgba(148,163,184,0.2);
+}
+
+/* === SCROLL MÁS PRO === */
+.admin-mov-list{
+  scrollbar-gutter: stable;
+}
+
+/* === MICRO DETALLE GENERAL === */
+small{
+  letter-spacing: 0.2px;
+}
 </style>
 
 </head>
