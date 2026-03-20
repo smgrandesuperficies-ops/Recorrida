@@ -749,6 +749,41 @@ h2, h3{
 .card{
   color: #e5e7eb;
 }
+    /* =========================================================
+   📅 FECHAS MÁS VISIBLES (ESTILO PRO)
+========================================================= */
+
+.date-title{
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* línea decorativa */
+.date-title::before{
+  content:"";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #6366f1;
+  box-shadow: 0 0 8px rgba(99,102,241,0.7);
+}
+
+/* línea horizontal sutil */
+.date-title::after{
+  content:"";
+  flex:1;
+  height:1px;
+  background: linear-gradient(to right,
+    rgba(99,102,241,0.4),
+    transparent);
+  margin-left: 8px;
+}
 </style>
 
 </head>
