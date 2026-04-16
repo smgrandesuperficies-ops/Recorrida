@@ -784,64 +784,94 @@ h2, h3{
     transparent);
   margin-left: 8px;
 }
- /* =========================================================
-   🤍 WHITE PREMIUM (CLARO PROFESIONAL)
+/* =========================================================
+   🤍 WHITE PREMIUM + NEGRO FUERTE + BOTONES NARANJA
 ========================================================= */
 
 :root{
   --bg:#ffffff;
   --card:#ffffff;
-  --text:#0f172a;
-  --muted:#64748b;
-  --primary:#2563eb;
+  --text:#000000;
+  --muted:#374151;
+  --primary:#f97316;
 }
 
 /* fondo general */
 body{
   background:#ffffff;
-  color:var(--text);
+  color:#000000;
 }
 
 /* cards */
 .card{
   background:#ffffff;
-  border:1px solid #e2e8f0;
-  box-shadow:0 10px 30px rgba(15,23,42,.06);
+  border:1px solid #dbe3ec;
+  box-shadow:0 10px 28px rgba(0,0,0,.06);
+}
+
+/* textos */
+h1,h2,h3,strong,label{
+  color:#000000;
+}
+
+small,p,span{
+  color:#111111;
 }
 
 /* inputs */
 input, select, textarea{
   background:#ffffff;
-  color:#0f172a;
+  color:#000000;
   border:1px solid #cbd5e1;
 }
 
-input::placeholder{
-  color:#94a3b8;
+input::placeholder,
+textarea::placeholder{
+  color:#6b7280;
 }
 
-/* botones */
+/* botones naranja */
 button{
-  background:linear-gradient(135deg,#2563eb,#1d4ed8);
-  color:white;
+  background:linear-gradient(135deg,#f97316,#ea580c);
+  color:#ffffff;
+  border:none;
+  box-shadow:0 6px 16px rgba(249,115,22,.22);
 }
 
-/* ghost button */
+button:hover{
+  background:linear-gradient(135deg,#ea580c,#c2410c);
+}
+
+/* ghost */
 button.ghost{
   background:#ffffff;
-  border:1px solid #cbd5e1;
-  color:#0f172a;
+  border:1px solid #f97316;
+  color:#c2410c;
 }
 
-/* movements */
+/* movimientos */
 .movement{
   background:#ffffff;
   border:1px solid #e2e8f0;
+  color:#000000;
 }
 
-/* header elegante */
+/* header */
 header{
-  background:linear-gradient(120deg,#2563eb,#1d4ed8,#1e40af);
+  background:linear-gradient(120deg,#f97316,#ea580c,#c2410c);
+  color:white;
+}
+
+/* tablas */
+.admin-table th,
+.admin-table td{
+  color:#000000;
+}
+
+/* filtros activos */
+.filter-active{
+  background:#f97316 !important;
+  color:#ffffff !important;
 }
 </style>
 
