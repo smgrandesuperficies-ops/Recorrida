@@ -873,6 +873,187 @@ header{
   background:#f97316 !important;
   color:#ffffff !important;
 }
+ /* =========================================================
+   FIX FINAL BLANCO + NEGRO + NARANJA
+   PEGAR AL FINAL DE TODO EL CSS
+========================================================= */
+
+/* fondo general */
+body{
+  background:#ffffff !important;
+  color:#000000 !important;
+}
+
+/* textos generales */
+h1,h2,h3,h4,h5,h6,
+label,strong,b,
+p,span,div,
+td,th,small{
+  color:#000000;
+}
+
+/* texto secundario un poco más suave */
+small{
+  color:#374151 !important;
+}
+
+/* cards */
+.card,
+.movement,
+.chat-card,
+.admin-mov-list,
+.chat-messages{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid #e5e7eb !important;
+  box-shadow:0 8px 24px rgba(0,0,0,.06) !important;
+}
+
+/* tabla admin */
+.admin-table{
+  width:100%;
+  border-collapse:collapse;
+  background:#ffffff !important;
+  border:1px solid #d1d5db !important;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.admin-table th{
+  background:#f3f4f6 !important;
+  color:#000000 !important;
+  border:1px solid #d1d5db !important;
+  font-weight:700;
+}
+
+.admin-table td{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid #e5e7eb !important;
+}
+
+.admin-table tr:nth-child(even) td{
+  background:#fafafa !important;
+}
+
+.admin-table tr:hover td{
+  background:#fff7ed !important;
+}
+
+/* fechas */
+.date-title{
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.date-title::before{
+  background:#f97316 !important;
+  box-shadow:0 0 8px rgba(249,115,22,.35) !important;
+}
+
+.date-title::after{
+  background:linear-gradient(to right, rgba(249,115,22,.45), transparent) !important;
+}
+
+/* inputs */
+input, select, textarea{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid #cbd5e1 !important;
+}
+
+input::placeholder,
+textarea::placeholder{
+  color:#6b7280 !important;
+}
+
+/* botones */
+button{
+  background:linear-gradient(135deg,#f97316,#ea580c) !important;
+  color:#ffffff !important;
+  border:none !important;
+  box-shadow:0 6px 16px rgba(249,115,22,.22) !important;
+}
+
+button:hover{
+  background:linear-gradient(135deg,#ea580c,#c2410c) !important;
+}
+
+/* botones ghost */
+button.ghost{
+  background:#ffffff !important;
+  color:#c2410c !important;
+  border:1px solid #f97316 !important;
+}
+
+/* botón eliminar redondo */
+.delete-x{
+  background:#f97316 !important;
+  color:#ffffff !important;
+  border:none !important;
+}
+
+/* filtros */
+.filter-active{
+  background:#f97316 !important;
+  color:#ffffff !important;
+  border-color:#f97316 !important;
+}
+
+/* header */
+header{
+  background:linear-gradient(120deg,#f97316,#ea580c,#c2410c) !important;
+  color:#ffffff !important;
+}
+
+/* badges de estado: texto oscuro legible */
+.badge{
+  font-weight:700 !important;
+  border:none !important;
+}
+
+/* estados */
+.estado-Pendiente{
+  background:#fee2e2 !important;
+  color:#991b1b !important;
+}
+
+.estado-Listo\ para\ retirar{
+  background:#fef3c7 !important;
+  color:#92400e !important;
+}
+
+.estado-En\ viaje{
+  background:#dbeafe !important;
+  color:#1d4ed8 !important;
+}
+
+.estado-Entregado{
+  background:#dcfce7 !important;
+  color:#166534 !important;
+}
+
+.estado-Faltante{
+  background:#fecaca !important;
+  color:#991b1b !important;
+}
+
+/* items del histórico admin */
+.admin-mov-item{
+  color:#000000 !important;
+  border-bottom:1px solid #e5e7eb !important;
+}
+
+/* chat */
+.chat-bubble{
+  color:#000000 !important;
+  background:#f3f4f6 !important;
+}
+
+.chat-message.mine .chat-bubble{
+  background:#ffedd5 !important;
+  color:#000000 !important;
+}   
 </style>
 
 </head>
